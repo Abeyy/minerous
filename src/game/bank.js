@@ -111,25 +111,37 @@ window.Minerous = window.Minerous || {};
   }
 
   function withdraw(id) {
-    const count = state.bank.items[id] || 0;
-    if (count <= 0) return;
-    if (!window.Minerous.canCarry(id)) {
+    const stored = state.bank.items[id] || 0;
+    if (stored <= 0) return;
+
+    // A vault entry can hold far more than a pack: take what fits rather than
+    // refusing the whole withdrawal because the last few wouldn't.
+    const room = window.Minerous.carryCapacityFor(id);
+    if (room <= 0) {
       window.Minerous.showToast('Your pack is full — deposit something first');
       return;
     }
-    // addItem is the single gatekeeper for capacity, so let it do the check.
-    if (!addItem(id, count)) return;
-    delete state.bank.items[id];
+
+    const taken = Math.min(stored, room);
+    addItem(id, taken);
+    if (taken >= stored) delete state.bank.items[id];
+    else state.bank.items[id] = stored - taken;
+
     window.Minerous.renderInventory();
     render();
+    const item = getItem(id);
+    if (taken < stored) {
+      window.Minerous.showToast(`Withdrew ${taken} ${item ? item.name : id} — pack full, ${stored - taken} left in the vault`);
+    }
   }
 
   function renderLists() {
     const held = Object.entries(state.inventory).filter(([id, n]) => id !== 'coins' && n > 0);
     const stored = Object.entries(state.bank.items).filter(([, n]) => n > 0);
 
-    el.heldHeading.textContent = `On You — ${held.length} / ${INVENTORY_SLOTS} slots`;
-    el.storedHeading.textContent = `In the Vault — ${stored.length} / ${BANK_SLOTS} slots`;
+    el.heldHeading.textContent = `On You — ${window.Minerous.inventorySlotsUsed()} / ${INVENTORY_SLOTS} slots`;
+    // The vault holds a whole hoard per entry, no stack limit — that's the point of it.
+    el.storedHeading.textContent = `In the Vault — ${stored.length} / ${BANK_SLOTS} kinds, any amount each`;
 
     el.heldList.innerHTML = '';
     if (held.length === 0) {
@@ -150,9 +162,18 @@ window.Minerous = window.Minerous || {};
       el.storedList.innerHTML = '<div class="node-list-note">Nothing stored yet.</div>';
     } else {
       for (const [id, count] of stored) {
-        const blocked = !window.Minerous.canCarry(id);
+        const room = window.Minerous.carryCapacityFor(id);
+        const blocked = room <= 0;
+        const partial = !blocked && room < count;
         el.storedList.appendChild(
-          itemRow(id, count, 'Withdraw', () => withdraw(id), blocked, blocked ? 'pack full' : '')
+          itemRow(
+            id,
+            count,
+            'Withdraw',
+            () => withdraw(id),
+            blocked,
+            blocked ? 'pack full' : partial ? `only ${room} will fit` : ''
+          )
         );
       }
     }

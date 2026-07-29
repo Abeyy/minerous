@@ -14,6 +14,7 @@ window.Minerous.SKILLS = [
   { id: 'woodcutting', name: 'Woodcutting', icon: '🪓', color: '#6b8f4e', blurb: 'Chop trees for logs.' },
   { id: 'fletching', name: 'Fletching', icon: '🪶', color: '#a67c52', blurb: 'Craft bows and arrows from logs.' },
   { id: 'monk', name: 'Monk', icon: '🧘', color: '#d99a5b', blurb: 'Meditate at the monastery to master martial techniques.' },
+  { id: 'hunter', name: 'Hunter', icon: '🏹', color: '#8a6a4a', blurb: 'Track and take game for meat, bones and hides.' },
 ];
 
 // The world is split into areas, and which skills you can train depends on where you
@@ -27,7 +28,7 @@ window.Minerous.AREAS = [
     icon: '🏡',
     color: '#6b8f4e',
     blurb: 'A quiet riverside village where every trade can still be learned.',
-    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'combat'],
+    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
     // Who lives here. NPCs are only reachable in the area they belong to.
     npcs: ['ned', 'borca', 'clara', 'roland'],
     // A village can only offer so much: past these levels the ore seams, the cleric
@@ -47,7 +48,7 @@ window.Minerous.AREAS = [
     icon: '🏛',
     color: '#4d9fd6',
     blurb: 'A bustling trade town on the eastern road.',
-    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'combat'],
+    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
     npcs: ['jeffries'],
     // The road is open, but the man standing on it is not. Charged every time you
     // enter until the crown replaces him.
@@ -112,7 +113,7 @@ window.Minerous.AREAS = [
     icon: '🏰',
     color: '#c9a45e',
     blurb: 'The seat of the realm. Every trade, the finest ore, and a palace at its heart.',
-    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'combat'],
+    skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
     npcs: ['aldric'],
     bank: true,
     store: true,
@@ -263,6 +264,7 @@ window.Minerous.SKILL_BUILDINGS = {
   crafting: 'Crafting Table',
   prayer: 'Temple',
   monk: 'Monastery',
+  hunter: 'Hunting Grounds',
   summoning: 'Summoning Circle',
   combat: 'Battlegrounds',
 };
@@ -335,6 +337,42 @@ window.Minerous.ORES = [
   { id: 'mithril', name: 'Mithril Ore', level: 30, xp: 50, timeMs: 5400, color: '#4d6fd6' },
   { id: 'adamantite', name: 'Adamantite Ore', level: 40, xp: 75, timeMs: 6200, color: '#3f8f5a' },
   { id: 'runite', name: 'Runite Ore', level: 50, xp: 110, timeMs: 7200, color: '#5ecbd6' },
+];
+
+// Hunting quarry. Unlike combat this isn't a fight — it's a gathering skill, so each
+// catch is a timed action that yields meat, bones and a hide. The hides have no use
+// yet; they're the raw material for leatherworking in Crafting later.
+window.Minerous.HUNT_TARGETS = [
+  {
+    id: 'rabbit', name: 'Wild Rabbit', level: 1, xp: 8, timeMs: 2600, color: '#b8a58a',
+    drops: [{ id: 'raw_rabbit', min: 1, max: 1 }, { id: 'rabbit_pelt', min: 1, max: 1 }, { id: 'bones', min: 1, max: 1 }],
+  },
+  {
+    id: 'boar', name: 'Wild Boar', level: 12, xp: 20, timeMs: 3200, color: '#8a5f47',
+    drops: [{ id: 'raw_boar_meat', min: 1, max: 2 }, { id: 'boar_hide', min: 1, max: 1 }, { id: 'bones', min: 1, max: 2 }],
+  },
+  {
+    id: 'stag', name: 'Forest Stag', level: 24, xp: 38, timeMs: 3800, color: '#a37348',
+    drops: [{ id: 'raw_venison', min: 1, max: 2 }, { id: 'deer_hide', min: 1, max: 2 }, { id: 'bones', min: 2, max: 3 }],
+  },
+  {
+    id: 'grey_wolf', name: 'Grey Wolf', level: 38, xp: 60, timeMs: 4400, color: '#7a8290',
+    drops: [{ id: 'raw_wolf_meat', min: 1, max: 2 }, { id: 'wolf_pelt', min: 1, max: 2 }, { id: 'bones', min: 2, max: 4 }],
+  },
+  {
+    id: 'cave_bear', name: 'Cave Bear', level: 52, xp: 95, timeMs: 5200, color: '#5e4636',
+    drops: [{ id: 'raw_bear_meat', min: 1, max: 3 }, { id: 'bear_hide', min: 1, max: 2 }, { id: 'bones', min: 3, max: 5 }],
+  },
+];
+
+// Pelts and hides. No recipes consume them yet — they exist so Crafting can pick them
+// up as leatherworking materials without a data migration later.
+window.Minerous.HIDES = [
+  { id: 'rabbit_pelt', name: 'Rabbit Pelt', color: '#c2b199', sellPrice: 5 },
+  { id: 'boar_hide', name: 'Boar Hide', color: '#8a5f47', sellPrice: 14 },
+  { id: 'deer_hide', name: 'Deer Hide', color: '#a37348', sellPrice: 30 },
+  { id: 'wolf_pelt', name: 'Wolf Pelt', color: '#7a8290', sellPrice: 55 },
+  { id: 'bear_hide', name: 'Bear Hide', color: '#5e4636', sellPrice: 95 },
 ];
 
 window.Minerous.TREES = [
@@ -465,7 +503,11 @@ window.Minerous.BONES_ITEM = { id: 'bones', name: 'Bones', color: '#d8d3c5', sel
 // Raw ingredients dropped by monsters, cooked via the Cooking skill.
 window.Minerous.RAW_FOOD = [
   { id: 'raw_rat_meat', name: 'Raw Rat Meat', color: '#c98a6a', sellPrice: 2 },
+  { id: 'raw_rabbit', name: 'Raw Rabbit', color: '#c9b39a', sellPrice: 4 },
   { id: 'raw_boar_meat', name: 'Raw Boar Meat', color: '#a8563f', sellPrice: 6 },
+  { id: 'raw_venison', name: 'Raw Venison', color: '#9c5238', sellPrice: 12 },
+  { id: 'raw_wolf_meat', name: 'Raw Wolf Meat', color: '#8a8f99', sellPrice: 20 },
+  { id: 'raw_bear_meat', name: 'Raw Bear Meat', color: '#6b4a38', sellPrice: 34 },
 ];
 
 // Miscellaneous monster drops with no skill use of their own — quest turn-ins, mostly.
@@ -484,6 +526,13 @@ window.Minerous.MISC_ITEMS = [
 window.Minerous.COOKING_RECIPES = [
   { id: 'cooked_rat_meat', name: 'Cooked Rat Meat', category: 'food', level: 1, xp: 6, timeMs: 2000, color: '#d68a3f', inputs: { raw_rat_meat: 1 }, heal: 4 },
   { id: 'cooked_boar_meat', name: 'Roast Boar', category: 'food', level: 8, xp: 16, timeMs: 2600, color: '#b8603f', inputs: { raw_boar_meat: 1 }, heal: 11 },
+
+  // The Hunter's catches, cooked. Each outheals anything you can buy at its tier,
+  // which is the payoff for levelling two skills instead of spending coin.
+  { id: 'cooked_rabbit', name: 'Roast Rabbit', category: 'food', level: 4, xp: 10, timeMs: 2200, color: '#d9c4a8', inputs: { raw_rabbit: 1 }, heal: 7 },
+  { id: 'cooked_venison', name: 'Roast Venison', category: 'food', level: 20, xp: 30, timeMs: 3000, color: '#b0603f', inputs: { raw_venison: 1 }, heal: 18 },
+  { id: 'cooked_wolf_meat', name: 'Wolf Steak', category: 'food', level: 34, xp: 48, timeMs: 3400, color: '#9aa0aa', inputs: { raw_wolf_meat: 1 }, heal: 26 },
+  { id: 'cooked_bear_meat', name: 'Bear Roast', category: 'food', level: 48, xp: 75, timeMs: 3800, color: '#7d5643', inputs: { raw_bear_meat: 1 }, heal: 36 },
 ];
 
 // Tavern fare — bought with coin rather than cooked, so it heals harder than anything
@@ -544,6 +593,7 @@ window.Minerous.getItemKind = function getItemKind(idOrItem) {
   if (window.Minerous.ORES.some((o) => o.id === id)) return 'ore';
   if (window.Minerous.TREES.some((t) => t.id === id)) return 'log';
   if (window.Minerous.RAW_FOOD.some((f) => f.id === id)) return 'raw';
+  if (window.Minerous.HIDES.some((h) => h.id === id)) return 'hide';
   if (window.Minerous.SPIRIT_STONES.some((s) => s.id === id)) return 'stone';
   if (!item) return 'misc';
 
@@ -561,6 +611,25 @@ window.Minerous.getItemKind = function getItemKind(idOrItem) {
   return 'misc';
 };
 
+// How the pack is grouped. Kinds are the fine-grained silhouette categories; sections
+// are the coarser buckets a player actually thinks in. Order here is display order.
+window.Minerous.INVENTORY_SECTIONS = [
+  { id: 'ore', name: 'Ore & Bars', kinds: ['ore', 'bar'] },
+  { id: 'wood', name: 'Logs', kinds: ['log'] },
+  { id: 'materials', name: 'Raw Materials', kinds: ['raw', 'hide', 'bone'] },
+  { id: 'food', name: 'Food', kinds: ['food'] },
+  { id: 'equipment', name: 'Equipment', kinds: ['weapon', 'bow', 'ammo', 'armor', 'clothing', 'book', 'gauntlet'] },
+  { id: 'stones', name: 'Spirit Stones', kinds: ['stone'] },
+  { id: 'other', name: 'Other', kinds: ['misc', 'coin'] },
+];
+
+window.Minerous.getItemSection = function getItemSection(idOrItem) {
+  const kind = window.Minerous.getItemKind(idOrItem);
+  const section = window.Minerous.INVENTORY_SECTIONS.find((s) => s.kinds.includes(kind));
+  // Anything a new kind introduces lands in Other rather than vanishing from the pack.
+  return section || window.Minerous.INVENTORY_SECTIONS.find((s) => s.id === 'other');
+};
+
 // The markup every list uses for an item's icon, so the shape is decided in one place.
 window.Minerous.itemSwatch = function itemSwatch(idOrItem, fallbackColor) {
   const item = typeof idOrItem === 'string' ? window.Minerous.getItem(idOrItem) : idOrItem;
@@ -568,8 +637,23 @@ window.Minerous.itemSwatch = function itemSwatch(idOrItem, fallbackColor) {
   return `<span class="node-swatch kind-${window.Minerous.getItemKind(idOrItem)}" style="background:${color}"></span>`;
 };
 
+// How many of a thing a crafting run makes before it stops on its own. Without this
+// a single click keeps going until the materials are gone, which is fine for bars and
+// ruinous for anything expensive.
+window.Minerous.BATCH_OPTIONS = [
+  { id: '1', label: '×1', count: 1 },
+  { id: '5', label: '×5', count: 5 },
+  { id: '10', label: '×10', count: 10 },
+  { id: 'all', label: 'All', count: Infinity },
+];
+
 window.Minerous.INVENTORY_SLOTS = 25;
 window.Minerous.BANK_SLOTS = 50;
+
+// How many of one thing fits in a single slot. 100 copper is four stacks, so a full
+// pack is a real constraint on a long gathering run rather than a formality.
+// The vault stores whole hoards in one entry — that's what a vault is for.
+window.Minerous.STACK_LIMIT = 28;
 
 // Interest ticks on banked gold while you play. Deliberately small — it should feel
 // like a reason to bank rather than a way to get rich standing still.
@@ -1602,6 +1686,8 @@ window.Minerous.getItem = function getItem(id) {
   if (tavernFood) return tavernFood;
   const storeGood = window.Minerous.STORE_GOODS.find((g) => g.id === id);
   if (storeGood) return storeGood;
+  const hide = window.Minerous.HIDES.find((h) => h.id === id);
+  if (hide) return hide;
   const stone = window.Minerous.SPIRIT_STONES.find((s) => s.id === id);
   if (stone) return stone;
   const clothing = window.Minerous.CLOTHING.find((c) => c.id === id);

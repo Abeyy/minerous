@@ -25,6 +25,7 @@
     cooking: document.getElementById('screen-cooking'),
     prayer: document.getElementById('screen-prayer'),
     monk: document.getElementById('screen-monk'),
+    hunter: document.getElementById('screen-hunter'),
     summoning: document.getElementById('screen-summoning'),
     crafting: document.getElementById('screen-crafting'),
     combat: document.getElementById('screen-combat'),
@@ -47,6 +48,7 @@
     cooking: () => window.Minerous.Cooking,
     prayer: () => window.Minerous.Prayer,
     monk: () => window.Minerous.Monk,
+    hunter: () => window.Minerous.Hunter,
     summoning: () => window.Minerous.Summoning,
     crafting: () => window.Minerous.Crafting,
     combat: () => window.Minerous.Combat,
@@ -116,14 +118,61 @@
     const entries = Object.entries(state.inventory).filter(([id, count]) => id !== 'coins' && count > 0);
 
     const cap = window.Minerous.INVENTORY_SLOTS;
-    inventorySlotsLabel.textContent = `🎒 ${entries.length} / ${cap} slots`;
-    inventorySlotsLabel.classList.toggle('full', entries.length >= cap);
+    const used = window.Minerous.inventorySlotsUsed();
+    inventorySlotsLabel.textContent = `🎒 ${used} / ${cap} slots · stacks of ${window.Minerous.STACK_LIMIT}`;
+    inventorySlotsLabel.classList.toggle('full', used >= cap);
 
     if (entries.length === 0) {
       inventoryGrid.innerHTML = '<div class="inv-empty">No resources yet — start a skill!</div>';
       return;
     }
     inventoryGrid.innerHTML = '';
+
+    // Bucket first, then render section by section, so the pack reads as a few
+    // labelled shelves rather than one long undifferentiated wall of icons.
+    const bySection = new Map();
+    for (const [id, count] of entries) {
+      if (!getItem(id)) continue;
+      const section = window.Minerous.getItemSection(id);
+      if (!bySection.has(section.id)) bySection.set(section.id, []);
+      bySection.get(section.id).push([id, count]);
+    }
+
+    for (const section of window.Minerous.INVENTORY_SECTIONS) {
+      const items = bySection.get(section.id);
+      if (!items || items.length === 0) continue;
+
+      const slotsUsed = items.reduce((sum, [, count]) => sum + window.Minerous.stacksFor(count), 0);
+      const collapsed = collapsedSections.has(section.id);
+
+      const header = document.createElement('button');
+      header.className = 'inv-section-header' + (collapsed ? ' collapsed' : '');
+      header.innerHTML = `
+        <span class="inv-section-caret">${collapsed ? '▸' : '▾'}</span>
+        <span class="inv-section-name">${section.name}</span>
+        <span class="inv-section-slots">${slotsUsed} ${slotsUsed === 1 ? 'slot' : 'slots'}</span>
+      `;
+      header.addEventListener('click', () => {
+        if (collapsedSections.has(section.id)) collapsedSections.delete(section.id);
+        else collapsedSections.add(section.id);
+        window.Minerous.renderInventory();
+      });
+      inventoryGrid.appendChild(header);
+
+      if (collapsed) continue;
+
+      const grid = document.createElement('div');
+      grid.className = 'inv-section-grid';
+      inventoryGrid.appendChild(grid);
+      renderSlots(items, grid);
+    }
+  };
+
+  // Which sections the player has folded away. Deliberately not saved — it's a view
+  // preference for the current session, not progress.
+  const collapsedSections = new Set();
+
+  function renderSlots(entries, container) {
     for (const [id, count] of entries) {
       const item = getItem(id);
       if (!item) continue;
@@ -137,10 +186,13 @@
       // equipArmor below), so anything still listed here is, by definition, not equipped.
       const slot = document.createElement('div');
       slot.className = 'inv-slot';
+      // A pile bigger than one stack says how many slots it's actually costing, so a
+      // filling pack is explicable rather than mysterious.
+      const stacks = window.Minerous.stacksFor(count);
       slot.innerHTML = `
         <span class="inv-slot-icon kind-${window.Minerous.getItemKind(id)}" style="background:${item.color}; display:block;"></span>
         <span class="inv-slot-name">${item.name}</span>
-        <span class="inv-slot-count">${count}</span>
+        <span class="inv-slot-count">${count}${stacks > 1 ? ` <span class="inv-slot-stacks">${stacks} slots</span>` : ''}</span>
       `;
 
       if (isWeapon) {
@@ -174,9 +226,9 @@
         slot.appendChild(btn);
       }
 
-      inventoryGrid.appendChild(slot);
+      container.appendChild(slot);
     }
-  };
+  }
 
   // Equipping moves the item out of the inventory and into the loadout; any item
   // it replaces is returned to the inventory. Unequipping just returns it.
@@ -326,6 +378,9 @@
   }
 
   window.Minerous.Persistence.loadOnBoot().then(() => {
+    // Repairs quest state carried over from older builds — must run after the save is
+    // in and before anything reads it.
+    window.Minerous.Quests.migrate();
     window.Minerous.renderInventory();
     // Returning players resume in their last area; new ones pick a destination first.
     window.Minerous.switchScreen(landingScreen());

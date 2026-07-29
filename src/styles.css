@@ -1494,6 +1494,11 @@ main {
   clip-path: polygon(36% 0, 68% 8%, 84% 34%, 68% 58%, 52% 70%, 60% 92%, 44% 100%, 32% 88%, 42% 66%, 20% 48%, 20% 16%);
 }
 
+/* A stretched, slightly ragged skin. */
+.kind-hide {
+  clip-path: polygon(18% 6%, 50% 0, 82% 6%, 94% 30%, 78% 50%, 92% 74%, 74% 98%, 50% 88%, 26% 98%, 8% 74%, 22% 50%, 6% 30%);
+}
+
 .kind-stone {
   clip-path: polygon(50% 0, 100% 38%, 78% 100%, 22% 100%, 0 38%);
 }
@@ -1529,6 +1534,55 @@ main {
 .kind-coin {
   border-radius: 50%;
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Says how many slots an oversized pile is eating, next to its count. */
+.inv-slot-stacks {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+/* Hunting: the bow the character draws, and the quarry it's aimed at. */
+.hunt-bow {
+  position: absolute;
+  top: 4px;
+  left: -3px;
+  width: 6px;
+  height: 26px;
+  border: 2px solid #8a6a4a;
+  border-left-color: transparent;
+  border-radius: 0 60% 60% 0 / 0 50% 50% 0;
+}
+
+.quarry {
+  position: absolute;
+  right: 18%;
+  bottom: 26%;
+  width: 46px;
+  height: 34px;
+}
+
+.quarry-body {
+  position: absolute;
+  inset: 8px 0 0 0;
+  border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%;
+  background: #8a6a4a;
+  box-shadow: inset -4px -3px 0 rgba(0, 0, 0, 0.22);
+}
+
+.quarry-ear {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  width: 8px;
+  height: 16px;
+  border-radius: 50% 50% 20% 20%;
+  background: #7a5c40;
+}
+
+.quarry.hit {
+  animation: rock-hit 0.28s ease;
 }
 
 .inventory-slots {
@@ -2146,10 +2200,94 @@ main {
   color: var(--accent-2);
 }
 
+/* The outer container stacks section headers and their grids; each section holds the
+   actual item grid, so headers span the full width instead of becoming grid cells. */
 .inventory-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inv-section-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 10px;
+  margin-bottom: 6px;
+}
+
+/* How many a crafting run makes before stopping itself. */
+.batch-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 4px;
+}
+
+.batch-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-right: 2px;
+}
+
+.batch-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.batch-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.batch-btn.active {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(77, 159, 214, 0.15);
+}
+
+.inv-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 4px;
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.inv-section-header:hover {
+  color: var(--text);
+}
+
+.inv-section-caret {
+  width: 10px;
+  font-size: 10px;
+}
+
+.inv-section-name {
+  flex: 1;
+  text-align: left;
+}
+
+.inv-section-slots {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .inv-slot {

@@ -33,14 +33,37 @@ window.Minerous = window.Minerous || {};
   }
 
   function isQuestAccepted(questId) {
-    if (state.quests.acceptedIds.includes(questId)) return true;
-    // Saves made before quests needed accepting: anything already being counted was
-    // in progress, so treat it as accepted rather than resetting the player's work.
-    if (state.quests.killSnapshots[questId] || state.quests.actionSnapshots[questId]) {
-      state.quests.acceptedIds.push(questId);
-      return true;
+    // Acceptance is recorded, never inferred. This used to fall back to "has a counter
+    // snapshot, so it must be in progress", which meant any code that snapshotted a
+    // quest silently accepted it on the player's behalf. See migrate() for the
+    // one-time handling of saves that predate acceptance.
+    return state.quests.acceptedIds.includes(questId);
+  }
+
+  // Run once at boot, after the save is loaded.
+  function migrate() {
+    const q = state.quests;
+
+    if (!q.migratedAcceptance) {
+      // Saves made before quests needed accepting: anything already being counted was
+      // genuinely in progress, so honour it rather than discarding the player's work.
+      const tracked = new Set([...Object.keys(q.killSnapshots), ...Object.keys(q.actionSnapshots)]);
+      for (const id of tracked) {
+        if (!q.acceptedIds.includes(id) && !q.completedIds.includes(id)) q.acceptedIds.push(id);
+      }
+      q.migratedAcceptance = true;
     }
-    return false;
+
+    // An accepted quest with a time limit but no deadline never expires. That happens
+    // to saves from before deadlines existed, and to any quest the auto-accept bug
+    // started. Start their clock now rather than leaving them unbounded.
+    for (const id of q.acceptedIds) {
+      if (q.deadlines[id] || q.completedIds.includes(id)) continue;
+      const quest = QUESTS.find((x) => x.id === id);
+      if (!quest) continue;
+      const { timeLimitMs } = window.Minerous.getQuestFailure(quest);
+      if (timeLimitMs) q.deadlines[id] = Date.now() + timeLimitMs;
+    }
   }
 
   function acceptQuest(npc, quest) {
@@ -608,13 +631,14 @@ window.Minerous = window.Minerous || {};
       window.Minerous.showToast(`Level up! ${skillName} level ${getLevel(quest.rewardXp.skill)}`, { levelUp: true });
     }
 
-    const nextQuest = activeQuestForNpc(npc.id);
-    if (nextQuest) ensureCounterSnapshot(nextQuest);
-
+    // The next quest is only *offered* now — no snapshot, no acceptance. Snapshotting
+    // it here (a leftover from before quests had to be accepted) made it look accepted
+    // to the migration below, so finishing one quest silently started the next.
     renderDetail();
   }
 
   window.Minerous.Quests = {
+    migrate,
     // Called by whichever location screen the NPC lives in.
     openPanel(container, npcId) {
       activeContainer = container;

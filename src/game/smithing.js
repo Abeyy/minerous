@@ -5,11 +5,15 @@ window.Minerous = window.Minerous || {};
 
   let activeRecipeId = null;
   let actionStart = 0;
+  // How many of the current recipe are still to be made. Infinity = until the
+  // materials run out, which is what 'All' means.
+  let batchRemaining = Infinity;
 
   const el = {
     level: document.getElementById('smithing-level'),
     xpFill: document.getElementById('smithing-xp-fill'),
     xpLabel: document.getElementById('smithing-xp-label'),
+    batch: document.getElementById('smithing-batch'),
     actionLabel: document.getElementById('smithing-action-label'),
     progressFill: document.getElementById('smithing-progress-fill'),
     barList: document.getElementById('smithing-bar-list'),
@@ -84,9 +88,10 @@ window.Minerous = window.Minerous || {};
 
   function startSmithing(recipeId) {
     activeRecipeId = recipeId;
+    batchRemaining = window.Minerous.Batch.count('smithing');
     actionStart = performance.now();
     el.arm.classList.add('swinging');
-    el.actionLabel.textContent = `Smithing ${getRecipe(recipeId).name}...`;
+    el.actionLabel.textContent = `Smithing ${getRecipe(recipeId).name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
   }
 
   function stopSmithing() {
@@ -122,6 +127,10 @@ window.Minerous = window.Minerous || {};
 
   window.Minerous.Smithing = {
     refresh() {
+      // Changing the size mid-run retargets the current run rather than cancelling it.
+      window.Minerous.Batch.render(el.batch, 'smithing', () => {
+        if (activeRecipeId) batchRemaining = window.Minerous.Batch.count('smithing');
+      });
       renderLists();
       window.Minerous.renderSkillLevelRow('smithing', 'smithing');
       if (!activeRecipeId) {
@@ -148,6 +157,18 @@ window.Minerous = window.Minerous || {};
         }
         awardResult(recipe);
         actionStart = performance.now();
+
+        // A bounded run stops itself once it's made what was asked for, so a click
+        // never quietly consumes the whole stockpile.
+        batchRemaining -= 1;
+        if (batchRemaining <= 0) {
+          stopSmithing();
+          renderLists();
+          window.Minerous.showToast(`Finished ${recipe.name} ×${window.Minerous.Batch.count('smithing')}`);
+          return;
+        }
+        el.actionLabel.textContent =
+          `Smithing ${recipe.name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
       }
     },
   };

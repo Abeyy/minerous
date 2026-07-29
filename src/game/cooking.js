@@ -5,8 +5,12 @@ window.Minerous = window.Minerous || {};
 
   let activeRecipeId = null;
   let actionStart = 0;
+  // How many of the current recipe are still to be made. Infinity = until the
+  // materials run out, which is what 'All' means.
+  let batchRemaining = Infinity;
 
   const el = {
+    batch: document.getElementById('cooking-batch'),
     actionLabel: document.getElementById('cooking-action-label'),
     progressFill: document.getElementById('cooking-progress-fill'),
     foodList: document.getElementById('cooking-food-list'),
@@ -67,9 +71,10 @@ window.Minerous = window.Minerous || {};
 
   function startCooking(recipeId) {
     activeRecipeId = recipeId;
+    batchRemaining = window.Minerous.Batch.count('cooking');
     actionStart = performance.now();
     el.arm.classList.add('swinging');
-    el.actionLabel.textContent = `Cooking ${getRecipe(recipeId).name}...`;
+    el.actionLabel.textContent = `Cooking ${getRecipe(recipeId).name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
   }
 
   function stopCooking() {
@@ -105,6 +110,10 @@ window.Minerous = window.Minerous || {};
 
   window.Minerous.Cooking = {
     refresh() {
+      // Changing the size mid-run retargets the current run rather than cancelling it.
+      window.Minerous.Batch.render(el.batch, 'cooking', () => {
+        if (activeRecipeId) batchRemaining = window.Minerous.Batch.count('cooking');
+      });
       renderList();
       window.Minerous.renderSkillLevelRow('cooking', 'cooking');
       if (!activeRecipeId) {
@@ -131,6 +140,18 @@ window.Minerous = window.Minerous || {};
         }
         awardResult(recipe);
         actionStart = performance.now();
+
+        // A bounded run stops itself once it's made what was asked for, so a click
+        // never quietly consumes the whole stockpile.
+        batchRemaining -= 1;
+        if (batchRemaining <= 0) {
+          stopCooking();
+          renderList();
+          window.Minerous.showToast(`Finished ${recipe.name} ×${window.Minerous.Batch.count('cooking')}`);
+          return;
+        }
+        el.actionLabel.textContent =
+          `Cooking ${recipe.name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
       }
     },
   };

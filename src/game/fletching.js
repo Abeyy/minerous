@@ -5,11 +5,15 @@ window.Minerous = window.Minerous || {};
 
   let activeRecipeId = null;
   let actionStart = 0;
+  // How many of the current recipe are still to be made. Infinity = until the
+  // materials run out, which is what 'All' means.
+  let batchRemaining = Infinity;
 
   const el = {
     level: document.getElementById('fletching-level'),
     xpFill: document.getElementById('fletching-xp-fill'),
     xpLabel: document.getElementById('fletching-xp-label'),
+    batch: document.getElementById('fletching-batch'),
     actionLabel: document.getElementById('fletching-action-label'),
     progressFill: document.getElementById('fletching-progress-fill'),
     arrowList: document.getElementById('fletching-arrow-list'),
@@ -82,9 +86,10 @@ window.Minerous = window.Minerous || {};
 
   function startFletching(recipeId) {
     activeRecipeId = recipeId;
+    batchRemaining = window.Minerous.Batch.count('fletching');
     actionStart = performance.now();
     el.arm.classList.add('swinging');
-    el.actionLabel.textContent = `Fletching ${getRecipe(recipeId).name}...`;
+    el.actionLabel.textContent = `Fletching ${getRecipe(recipeId).name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
   }
 
   function stopFletching() {
@@ -120,6 +125,10 @@ window.Minerous = window.Minerous || {};
 
   window.Minerous.Fletching = {
     refresh() {
+      // Changing the size mid-run retargets the current run rather than cancelling it.
+      window.Minerous.Batch.render(el.batch, 'fletching', () => {
+        if (activeRecipeId) batchRemaining = window.Minerous.Batch.count('fletching');
+      });
       renderLists();
       window.Minerous.renderSkillLevelRow('fletching', 'fletching');
       if (!activeRecipeId) {
@@ -146,6 +155,18 @@ window.Minerous = window.Minerous || {};
         }
         awardResult(recipe);
         actionStart = performance.now();
+
+        // A bounded run stops itself once it's made what was asked for, so a click
+        // never quietly consumes the whole stockpile.
+        batchRemaining -= 1;
+        if (batchRemaining <= 0) {
+          stopFletching();
+          renderLists();
+          window.Minerous.showToast(`Finished ${recipe.name} ×${window.Minerous.Batch.count('fletching')}`);
+          return;
+        }
+        el.actionLabel.textContent =
+          `Fletching ${recipe.name}...${window.Minerous.Batch.remainingSuffix(batchRemaining)}`;
       }
     },
   };

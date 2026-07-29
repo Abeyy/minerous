@@ -31,6 +31,9 @@ window.Minerous = window.Minerous || {};
     // Feat ids bought at the Hall of Champions. Points spent are derived from this
     // list rather than stored, so the two can never drift apart.
     feats: [],
+    // Per-skill batch size for crafting runs, keyed by skill id. Remembered so you
+    // don't have to reset it every time you walk into the smithy.
+    batchSize: {},
     skillXp: {
       mining: 0,
       smithing: 0,
@@ -41,6 +44,7 @@ window.Minerous = window.Minerous || {};
       crafting: 0,
       woodcutting: 0,
       fletching: 0,
+      hunter: 0,
       ranged: 0,
       monk: 0,
     },
@@ -64,6 +68,8 @@ window.Minerous = window.Minerous || {};
       killSnapshots: {},
       actionSnapshots: {},
       giftCooldowns: {},
+      // Set once the pre-acceptance migration has run; see Quests.migrate().
+      migratedAcceptance: false,
     },
     kills: {},
     // Lifetime counters for repeatable actions that quests can ask you to perform
@@ -99,36 +105,61 @@ window.Minerous = window.Minerous || {};
     return after > before;
   };
 
-  // Capacity counts stacks, not quantities — a pile of 400 copper is one slot. Coins
-  // never occupy one; they live on their own line.
-  function countSlots(bag) {
+  // A carried pile spills into as many slots as it needs: 100 copper at a stack limit
+  // of 28 is four slots, not one. Coins never occupy a slot — they live on their own
+  // line — and the vault ignores stack limits entirely, storing a whole hoard per
+  // entry, which is the reason to walk to one.
+  function stacksFor(count) {
+    return Math.ceil(count / window.Minerous.STACK_LIMIT);
+  }
+
+  function countCarriedSlots(bag) {
+    return Object.entries(bag)
+      .filter(([id, count]) => id !== 'coins' && count > 0)
+      .reduce((sum, [, count]) => sum + stacksFor(count), 0);
+  }
+
+  function countBankEntries(bag) {
     return Object.entries(bag).filter(([id, count]) => id !== 'coins' && count > 0).length;
   }
 
+  window.Minerous.stacksFor = stacksFor;
+
   window.Minerous.inventorySlotsUsed = function inventorySlotsUsed() {
-    return countSlots(state.inventory);
+    return countCarriedSlots(state.inventory);
   };
 
   window.Minerous.bankSlotsUsed = function bankSlotsUsed() {
-    return countSlots(state.bank.items);
+    return countBankEntries(state.bank.items);
   };
 
   window.Minerous.isInventoryFull = function isInventoryFull() {
-    return countSlots(state.inventory) >= window.Minerous.INVENTORY_SLOTS;
+    return countCarriedSlots(state.inventory) >= window.Minerous.INVENTORY_SLOTS;
   };
 
-  // True when this id could be added right now: either it already has a stack to
-  // grow, or there's a free slot for a new one.
-  window.Minerous.canCarry = function canCarry(id) {
-    if (id === 'coins' || (state.inventory[id] || 0) > 0) return true;
-    return !window.Minerous.isInventoryFull();
+  // Whether `qty` more of this id would fit. Topping up a part-filled stack is free;
+  // spilling into a new one needs a slot, and a big haul may need several.
+  window.Minerous.canCarry = function canCarry(id, qty = 1) {
+    if (id === 'coins') return true;
+    const current = state.inventory[id] || 0;
+    const extraSlots = stacksFor(current + qty) - stacksFor(current);
+    return countCarriedSlots(state.inventory) + extraSlots <= window.Minerous.INVENTORY_SLOTS;
+  };
+
+  // The most of this id you could pick up right now — part-filled stack plus whatever
+  // empty slots remain. Used by the vault so withdrawing a hoard takes what fits
+  // instead of refusing outright.
+  window.Minerous.carryCapacityFor = function carryCapacityFor(id) {
+    const limit = window.Minerous.STACK_LIMIT;
+    const current = state.inventory[id] || 0;
+    const freeSlots = window.Minerous.INVENTORY_SLOTS - countCarriedSlots(state.inventory);
+    const roomInOpenStack = current % limit === 0 ? 0 : limit - (current % limit);
+    return roomInOpenStack + Math.max(0, freeSlots) * limit;
   };
 
   // A full bag shouldn't spam a toast on every swing of a pickaxe.
   let lastFullWarnAt = 0;
 
-  // Returns false when the bag had no room, so callers that care (gathering skills)
-  // can stop rather than silently dropping the haul.
   // Losing experience can cost you levels. The only floor is zero — fall far enough
   // and the skill genuinely regresses, which is the point of a penalty.
   // Returns { lost, levelBefore, levelAfter } so callers can report it.
@@ -149,8 +180,10 @@ window.Minerous = window.Minerous || {};
     return { lost, levelBefore, levelAfter };
   };
 
+  // Returns false when the bag had no room, so callers that care (gathering skills)
+  // can stop rather than silently dropping the haul.
   window.Minerous.addItem = function addItem(id, qty) {
-    if (!window.Minerous.canCarry(id)) {
+    if (!window.Minerous.canCarry(id, qty)) {
       const now = Date.now();
       if (now - lastFullWarnAt > 4000) {
         lastFullWarnAt = now;

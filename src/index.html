@@ -250,6 +250,8 @@
           </div>
         </div>
 
+        <div class="batch-row" id="smithing-batch"></div>
+
         <h3 class="panel-subtitle">Bars</h3>
         <div class="node-list" id="smithing-bar-list"></div>
         <h3 class="panel-subtitle">Weapons</h3>
@@ -301,6 +303,8 @@
           </div>
         </div>
 
+        <div class="batch-row" id="fletching-batch"></div>
+
         <h3 class="panel-subtitle">Arrows</h3>
         <div class="node-list" id="fletching-arrow-list"></div>
         <h3 class="panel-subtitle">Bows</h3>
@@ -350,6 +354,8 @@
             <div class="progress-bar-fill" id="cooking-progress-fill"></div>
           </div>
         </div>
+
+        <div class="batch-row" id="cooking-batch"></div>
 
         <h3 class="panel-subtitle">Food</h3>
         <div class="node-list" id="cooking-food-list"></div>
@@ -410,6 +416,51 @@
 
         <h3 class="panel-subtitle">Cleric Gear</h3>
         <div class="node-list" id="prayer-gear-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-hunter" hidden>
+        <h2 class="panel-title">Hunting Grounds</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="hunter-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="hunter-xp-fill"></div></div>
+          <span class="skill-level-xp" id="hunter-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="hunter-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="hunter-character-arm">
+              <div class="hunt-bow"></div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="quarry" id="hunter-quarry">
+            <div class="quarry-body"></div>
+            <div class="quarry-ear"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="hunter-action-label">Select quarry to start hunting</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="hunter-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Quarry</h3>
+        <div class="node-list" id="hunter-target-list"></div>
       </section>
 
       <section class="scene-panel screen" id="screen-monk" hidden>
@@ -778,6 +829,7 @@
 
   <script src="game/data.js"></script>
   <script src="game/state.js"></script>
+  <script src="game/batch.js"></script>
   <script src="game/mining.js"></script>
   <script src="game/woodcutting.js"></script>
   <script src="game/smithing.js"></script>
@@ -785,6 +837,7 @@
   <script src="game/cooking.js"></script>
   <script src="game/prayer.js"></script>
   <script src="game/monk.js"></script>
+  <script src="game/hunter.js"></script>
   <script src="game/summoning.js"></script>
   <script src="game/crafting.js"></script>
   <script src="game/combat.js"></script>
