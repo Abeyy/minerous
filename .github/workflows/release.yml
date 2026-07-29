@@ -24,7 +24,13 @@ jobs:
       fail-fast: false
       matrix:
         # Each runner can only build its own platform's installers.
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        #
+        # Windows only for now: NSIS auto-update works on an unsigned build, whereas
+        # macOS silently refuses to install unsigned updates (Squirrel.Mac checks the
+        # signature) and would ship a release that looks updatable but isn't. Add
+        # `ubuntu-latest` back whenever you want AppImage builds — those also update
+        # unsigned — and `macos-latest` once you have a Developer ID certificate.
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -40,6 +46,8 @@ jobs:
       # supabase.config.json is gitignored, so CI has no credentials file. The app
       # treats a missing config as "cloud sync unavailable" and still runs, so builds
       # succeed without secrets — add them here if you want cloud sync in releases.
+      # GITHUB_TOKEN is provided automatically and can write releases in this repo —
+      # no secret to configure. (Publishing to a *different* repo would need a PAT.)
       - name: Build and publish
         run: npx electron-builder --publish always
         env:

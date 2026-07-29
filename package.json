@@ -36,7 +36,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "REPLACE_WITH_YOUR_GITHUB_USERNAME",
+        "owner": "Abeyy",
         "repo": "minerous"
       }
     ],
@@ -49,7 +49,12 @@
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
