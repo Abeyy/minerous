@@ -46,9 +46,38 @@ jobs:
       # supabase.config.json is gitignored, so CI has no credentials file. The app
       # treats a missing config as "cloud sync unavailable" and still runs, so builds
       # succeed without secrets — add them here if you want cloud sync in releases.
-      # GITHUB_TOKEN is provided automatically and can write releases in this repo —
-      # no secret to configure. (Publishing to a *different* repo would need a PAT.)
-      - name: Build and publish
-        run: npx electron-builder --publish always
+      #
+      # Build only. Uploading is a separate, explicit step below: electron-builder's
+      # own publisher can report success while quietly uploading nothing, which is
+      # exactly what happened on v0.1.1.
+      - name: Build
+        run: npx electron-builder --publish never
+
+      # Printed so a failed upload is diagnosable from the log alone, rather than
+      # having to guess whether the artifacts were ever produced.
+      - name: List build output
+        shell: bash
+        run: ls -lh release
+
+      # Attached to the Actions run itself, so the installer is downloadable even if
+      # the release step fails.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minerous-windows
+          path: |
+            release/*.exe
+            release/latest.yml
+
+      # draft: false is the important part — a draft release is invisible to
+      # electron-updater, so players would never be offered the update.
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          fail_on_unmatched_files: true
+          files: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

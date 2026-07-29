@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder --publish never"
   },
   "keywords": [],
   "author": "",
@@ -37,7 +37,8 @@
       {
         "provider": "github",
         "owner": "Abeyy",
-        "repo": "minerous"
+        "repo": "minerous",
+        "releaseType": "release"
       }
     ],
     "mac": {

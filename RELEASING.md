@@ -61,6 +61,27 @@ electron-updater compares the running app's version against the newest release. 
 tag and `package.json` version must agree — `npm version` keeps them in sync, which is
 why it's worth using rather than editing by hand.
 
+## How publishing works
+
+The workflow builds with `--publish never`, then uploads explicitly with
+`softprops/action-gh-release` and `draft: false`.
+
+That split is deliberate. electron-builder's own GitHub publisher can report success
+while uploading nothing — it did exactly that on v0.1.1, leaving a green Actions run
+and a release page with only GitHub's auto-generated source-code archives. The explicit
+step fails loudly instead (`fail_on_unmatched_files: true`), and a `ls -lh release`
+step before it means the log always shows what was actually built.
+
+The build also uploads the installer as a **workflow artifact**, so even if the release
+step fails you can still download a working `.exe` from the Actions run page.
+
+`draft: false` matters: a draft release is invisible to electron-updater, so players
+would never be offered the update no matter how healthy CI looked.
+
+`build.publish` stays in `package.json` even though CI no longer uses it for uploading —
+electron-builder bakes it into `resources/app-update.yml` inside the installer, and that
+file is how the installed app knows which repo to poll.
+
 ## What gets uploaded
 
 Alongside the installer, electron-builder uploads `latest.yml` (and `latest-mac.yml` /
