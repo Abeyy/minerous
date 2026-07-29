@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>Minerous</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">⛰</span>
+      <span class="brand-name">Minerous</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="home-btn" id="nav-account-btn">👤 Account</button>
+      <button class="home-btn" id="nav-quests-btn">📜 Quests</button>
+      <button class="home-btn" id="nav-loadout-btn">🛡️ Loadout</button>
+      <button class="home-btn" id="nav-world-btn">🗺 Travel</button>
+      <button class="home-btn" id="nav-home-btn">🏠 Home</button>
+    </div>
+  </header>
+
+  <div class="modal-overlay" id="gate-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="gate-modal-title">Blocked Path</h2>
+        <button class="modal-close" id="gate-modal-close">✕</button>
+      </div>
+
+      <p class="modal-subtitle" id="gate-modal-text"></p>
+      <div class="gate-modal-result" id="gate-modal-result" hidden></div>
+
+      <div class="gate-modal-quiz" id="gate-modal-quiz" hidden></div>
+      <div class="gate-modal-rewards" id="gate-modal-rewards" hidden></div>
+
+      <div class="gate-modal-actions" id="gate-modal-actions">
+        <button class="modal-btn" id="gate-retreat-btn">Attempt to retreat</button>
+        <button class="modal-btn primary" id="gate-fight-btn">Fight the Goblin Force</button>
+        <button class="modal-btn primary" id="gate-continue-btn" hidden>Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="boss-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="boss-modal-title">Boss Fight</h2>
+        <button class="modal-close" id="boss-modal-close">✕</button>
+      </div>
+
+      <p class="modal-subtitle" id="boss-modal-text"></p>
+      <div class="gate-modal-result danger" id="boss-modal-penalty"></div>
+
+      <div class="gate-modal-actions">
+        <button class="modal-btn" id="boss-cancel-btn">Not yet</button>
+        <button class="modal-btn primary" id="boss-confirm-btn">Face it</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="account-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Account</h2>
+        <button class="modal-close" id="account-modal-close">✕</button>
+      </div>
+
+      <div id="account-signed-out">
+        <p class="modal-subtitle">Sign in to sync your progress across devices.</p>
+        <input type="email" id="account-email" class="modal-input" placeholder="Email" autocomplete="email" />
+        <input type="password" id="account-password" class="modal-input" placeholder="Password" autocomplete="current-password" />
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="account-signin-btn">Log In</button>
+          <button class="modal-btn" id="account-signup-btn">Sign Up</button>
+        </div>
+      </div>
+
+      <div id="account-signed-in" hidden>
+        <p class="modal-subtitle">Signed in as <span id="account-email-label"></span></p>
+        <div class="modal-actions">
+          <button class="modal-btn primary" id="account-sync-btn">Sync Now</button>
+          <button class="modal-btn" id="account-signout-btn">Log Out</button>
+        </div>
+      </div>
+
+      <div class="modal-status" id="account-status"></div>
+
+      <div class="modal-version">
+        <span id="app-version-label">Minerous</span>
+        <button class="modal-btn" id="update-check-btn">Check for updates</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section id="screen-world" class="screen home-screen" hidden>
+      <h2 class="panel-title">Choose Your Destination</h2>
+      <p class="modal-subtitle">Each place offers different trades to learn.</p>
+      <div class="skill-cards" id="area-cards"></div>
+    </section>
+
+    <section id="screen-home" class="screen home-screen">
+      <h2 class="panel-title" id="home-area-name">Choose a Skill</h2>
+      <p class="modal-subtitle" id="home-area-blurb"></p>
+      <div class="skill-cards" id="skill-cards"></div>
+    </section>
+
+    <div id="skill-area" class="layout" hidden>
+      <section class="scene-panel screen" id="screen-mining" hidden>
+        <h2 class="panel-title">Mining Site</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="mining-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="mining-xp-fill"></div></div>
+          <span class="skill-level-xp" id="mining-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="mining-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="mining-character-arm">
+              <div class="pickaxe">
+                <div class="pickaxe-handle"></div>
+                <div class="pickaxe-head"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="rock" id="mining-rock">
+            <div class="rock-shape">
+              <div class="rock-highlight"></div>
+              <div class="rock-crack"></div>
+            </div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="mining-action-label">Select an ore to start mining</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="mining-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Ore Nodes</h3>
+        <div class="node-list" id="mining-ore-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-woodcutting" hidden>
+        <h2 class="panel-title">Timberland</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="woodcutting-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="woodcutting-xp-fill"></div></div>
+          <span class="skill-level-xp" id="woodcutting-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="woodcutting-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="woodcutting-character-arm">
+              <div class="axe">
+                <div class="axe-handle"></div>
+                <div class="axe-head"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="tree" id="woodcutting-tree">
+            <div class="tree-trunk"></div>
+            <div class="tree-canopy"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="woodcutting-action-label">Select a tree to start chopping</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="woodcutting-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Trees</h3>
+        <div class="node-list" id="woodcutting-tree-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-smithing" hidden>
+        <h2 class="panel-title">Smithy</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="smithing-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="smithing-xp-fill"></div></div>
+          <span class="skill-level-xp" id="smithing-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="npc-panel" id="smithing-npc-panel" hidden></div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="smithing-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="smithing-character-arm">
+              <div class="hammer">
+                <div class="hammer-handle"></div>
+                <div class="hammer-head"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="anvil" id="smithing-anvil">
+            <div class="anvil-shape"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="smithing-action-label">Select a recipe to start smithing</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="smithing-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Bars</h3>
+        <div class="node-list" id="smithing-bar-list"></div>
+        <h3 class="panel-subtitle">Weapons</h3>
+        <div class="node-list" id="smithing-weapon-list"></div>
+        <h3 class="panel-subtitle">Armor</h3>
+        <div class="node-list" id="smithing-armor-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-fletching" hidden>
+        <h2 class="panel-title">Fletcher's Bench</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="fletching-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="fletching-xp-fill"></div></div>
+          <span class="skill-level-xp" id="fletching-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="fletching-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="fletching-character-arm">
+              <div class="knife">
+                <div class="knife-handle"></div>
+                <div class="knife-blade"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="workbench" id="fletching-workbench">
+            <div class="workbench-shape"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="fletching-action-label">Select a recipe to start fletching</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="fletching-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Arrows</h3>
+        <div class="node-list" id="fletching-arrow-list"></div>
+        <h3 class="panel-subtitle">Bows</h3>
+        <div class="node-list" id="fletching-bow-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-cooking" hidden>
+        <h2 class="panel-title">Campfire</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="cooking-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="cooking-xp-fill"></div></div>
+          <span class="skill-level-xp" id="cooking-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="cooking-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="cooking-character-arm">
+              <div class="pan">
+                <div class="pan-handle"></div>
+                <div class="pan-head"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="campfire" id="cooking-campfire">
+            <div class="campfire-logs"></div>
+            <div class="campfire-flame"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="cooking-action-label">Select food to start cooking</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="cooking-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Food</h3>
+        <div class="node-list" id="cooking-food-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-prayer" hidden>
+        <h2 class="panel-title">Temple</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="prayer-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="prayer-xp-fill"></div></div>
+          <span class="skill-level-xp" id="prayer-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="npc-panel" id="prayer-npc-panel" hidden></div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="prayer-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front"></div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="shrine" id="prayer-shrine">
+            <div class="shrine-base"></div>
+            <div class="shrine-glow"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="prayer-action-label">Select an offering or commune with the shrine</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="prayer-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Recharge</h3>
+        <div class="node-list" id="prayer-commune-list"></div>
+
+        <h3 class="panel-subtitle">Offerings</h3>
+        <div class="node-list" id="prayer-offering-list"></div>
+
+        <h3 class="panel-subtitle">Worship</h3>
+        <div class="node-list" id="prayer-worship-list"></div>
+
+        <h3 class="panel-subtitle">Cleric Spells</h3>
+        <div class="node-list" id="prayer-spell-list"></div>
+
+        <h3 class="panel-subtitle">Cleric Gear</h3>
+        <div class="node-list" id="prayer-gear-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-monk" hidden>
+        <h2 class="panel-title">Monastery</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="monk-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="monk-xp-fill"></div></div>
+          <span class="skill-level-xp" id="monk-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="monk-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front"></div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="gong" id="monk-gong">
+            <div class="gong-stand"></div>
+            <div class="gong-disc"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="monk-action-label">Select an action at the monastery</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="monk-progress-fill"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle">Training</h3>
+        <div class="node-list" id="monk-meditation-list"></div>
+
+        <h3 class="panel-subtitle">Techniques</h3>
+        <div class="node-list" id="monk-technique-list"></div>
+
+        <h3 class="panel-subtitle">Monk Gear</h3>
+        <div class="node-list" id="monk-gear-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-summoning" hidden>
+        <h2 class="panel-title">Summoning Circle</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="summoning-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="summoning-xp-fill"></div></div>
+          <span class="skill-level-xp" id="summoning-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="summoning-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front"></div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="summon-circle" id="summoning-circle">
+            <div class="summon-circle-ring"></div>
+            <div class="summon-circle-glow"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="summoning-action-label">Select a familiar to summon</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="summoning-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="weapon-status" id="summoning-familiar-status">Active Familiar: None</div>
+
+        <h3 class="panel-subtitle">Familiars</h3>
+        <div class="node-list" id="summoning-familiar-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-crafting" hidden>
+        <h2 class="panel-title">Crafting Table</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="crafting-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="crafting-xp-fill"></div></div>
+          <span class="skill-level-xp" id="crafting-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="crafting-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front"></div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="crafting-gem" id="crafting-gem">
+            <div class="crafting-gem-shape"></div>
+            <div class="spark">✦</div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="crafting-action-label">Select a spirit stone to socket</div>
+          <div class="progress-bar">
+            <div class="progress-bar-fill" id="crafting-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="weapon-status" id="crafting-socket-status">Weapon Socket: None · Armor Socket: None</div>
+
+        <h3 class="panel-subtitle">Weapon Sockets</h3>
+        <div class="node-list" id="crafting-weapon-stone-list"></div>
+        <h3 class="panel-subtitle">Armor Sockets</h3>
+        <div class="node-list" id="crafting-armor-stone-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-combat" hidden>
+        <h2 class="panel-title" id="combat-title">Battlegrounds</h2>
+        <div class="skill-level-row">
+          <span>Level <b id="combat-level">1</b></span>
+          <div class="xp-bar"><div class="xp-bar-fill" id="combat-xp-fill"></div></div>
+          <span class="skill-level-xp" id="combat-xp-label">0 / 0 xp</span>
+        </div>
+
+        <div class="combat-top-row">
+          <div class="attack-style-menu" id="attack-style-menu"></div>
+          <label class="auto-eat-toggle">
+            <input type="checkbox" id="combat-auto-eat-toggle" />
+            <span class="auto-eat-switch"></span>
+            <span class="auto-eat-label">Auto Eat</span>
+          </label>
+        </div>
+
+        <div class="scene combat-scene">
+          <div class="scene-ground"></div>
+          <div class="character" id="combat-character">
+            <div class="character-shadow"></div>
+            <div class="leg leg-back"></div>
+            <div class="leg leg-front"></div>
+            <div class="character-body">
+              <div class="character-belt"></div>
+              <div class="character-chest-light"></div>
+            </div>
+            <div class="arm arm-back"></div>
+            <div class="arm arm-front" id="combat-character-arm">
+              <div class="sword">
+                <div class="sword-handle"></div>
+                <div class="sword-blade"></div>
+              </div>
+            </div>
+            <div class="character-head">
+              <div class="character-visor"></div>
+              <div class="character-lamp"></div>
+            </div>
+          </div>
+          <div class="familiar" id="combat-familiar" hidden>
+            <div class="familiar-shape" id="combat-familiar-shape">
+              <div class="familiar-ear familiar-ear-left"></div>
+              <div class="familiar-ear familiar-ear-right"></div>
+            </div>
+          </div>
+          <div class="monster" id="combat-monster" hidden>
+            <div class="monster-shape" id="combat-monster-shape"></div>
+          </div>
+        </div>
+
+        <div class="combat-hp-row">
+          <div class="combat-hp">
+            <div class="combat-hp-label">
+              <span>You</span>
+              <span id="combat-player-hp-label">0 / 0</span>
+            </div>
+            <div class="hp-bar"><div class="hp-bar-fill player" id="combat-player-hp-fill"></div></div>
+          </div>
+          <div class="combat-hp">
+            <div class="combat-hp-label">
+              <span id="combat-monster-name">No target</span>
+              <span id="combat-monster-hp-label">0 / 0</span>
+            </div>
+            <div class="hp-bar"><div class="hp-bar-fill hp-monster" id="combat-monster-hp-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="action-status">
+          <div class="action-label" id="combat-action-label">Select a monster to fight</div>
+        </div>
+
+        <div class="combat-status-row">
+          <div class="combat-status-col">
+            <div class="weapon-status" id="combat-weapon-status">Weapon: Fists</div>
+            <div class="weapon-status" id="combat-armor-status">Armor: None</div>
+            <div class="weapon-status" id="combat-prayer-status">Active Blessings: None</div>
+            <div class="weapon-status" id="combat-familiar-status">Familiar: None</div>
+            <div class="weapon-status" id="combat-ranged-level">Ranged: Level 1 (0 / 83 xp)</div>
+          </div>
+          <div class="combat-log-col">
+            <h3 class="panel-subtitle">Combat Log</h3>
+            <div class="combat-log" id="combat-log"></div>
+          </div>
+        </div>
+
+        <h3 class="panel-subtitle" id="combat-monster-heading">Monsters</h3>
+        <div class="node-list" id="combat-monster-list"></div>
+
+        <h3 class="panel-subtitle" id="combat-boss-heading" hidden>Bosses</h3>
+        <div class="node-list" id="combat-boss-list" hidden></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-store" hidden>
+        <h2 class="panel-title" id="store-title">General Store</h2>
+        <p class="modal-subtitle" id="store-blurb"></p>
+
+        <h3 class="panel-subtitle">Provisions</h3>
+        <div class="node-list" id="store-goods-list"></div>
+
+        <h3 class="panel-subtitle">Spirit Stones</h3>
+        <div class="node-list-note" id="store-stone-note" hidden></div>
+        <h4 class="panel-subtitle store-sub">Weapon Stones</h4>
+        <div class="node-list" id="store-weapon-stone-list"></div>
+        <h4 class="panel-subtitle store-sub">Armor Stones</h4>
+        <div class="node-list" id="store-armor-stone-list"></div>
+
+        <h3 class="panel-subtitle">Sell</h3>
+        <div class="node-list" id="store-sell-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-loadout" hidden>
+        <h2 class="panel-title">Loadout</h2>
+        <p class="modal-subtitle">Everything you have equipped, and the combat stats it adds up to.</p>
+
+        <h3 class="panel-subtitle">Equipped</h3>
+        <div class="node-list" id="loadout-equipped-list"></div>
+
+        <h3 class="panel-subtitle">Combat Stats</h3>
+        <div class="node-list" id="loadout-stats-list"></div>
+
+        <h3 class="panel-subtitle">Feats</h3>
+        <div class="feats-header" id="loadout-feats-header"></div>
+        <div class="node-list" id="loadout-feats-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-quests" hidden>
+        <h2 class="panel-title">Quest Log</h2>
+        <p class="modal-subtitle">Quests you have accepted. Visit townsfolk where they live to take on more.</p>
+        <div class="node-list" id="quest-log-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-witch_hut" hidden>
+        <h2 class="panel-title">Borca's Hut</h2>
+        <p class="modal-subtitle">A crooked hut thick with the smell of brewing.</p>
+        <div class="npc-panel" id="witch_hut-npc-panel"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-barracks" hidden>
+        <h2 class="panel-title">The Barracks</h2>
+        <p class="modal-subtitle">Drill yards and armour racks of the town guard.</p>
+        <div class="npc-panel" id="barracks-npc-panel"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-tavern" hidden>
+        <h2 class="panel-title">The Tavern</h2>
+        <p class="modal-subtitle">Warm, loud, and always short of stew.</p>
+        <div class="npc-panel" id="tavern-npc-panel"></div>
+
+        <h3 class="panel-subtitle">A Room for the Night</h3>
+        <div class="tavern-rest" id="tavern-rest"></div>
+
+        <h3 class="panel-subtitle">On the Menu</h3>
+        <div class="node-list" id="tavern-food-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-palace" hidden>
+        <h2 class="panel-title">The Royal Palace</h2>
+        <p class="modal-subtitle">Banner-hung halls, and a king who asked for you by name.</p>
+        <div class="npc-panel" id="palace-npc-panel"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-bank" hidden>
+        <h2 class="panel-title">The Vault</h2>
+        <div class="bank-banker" id="bank-banker"></div>
+        <div class="bank-gold" id="bank-gold"></div>
+
+        <h3 class="panel-subtitle" id="bank-held-heading">On You</h3>
+        <div class="node-list" id="bank-held-list"></div>
+
+        <h3 class="panel-subtitle" id="bank-stored-heading">In the Vault</h3>
+        <div class="node-list" id="bank-stored-list"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-bandit_camp" hidden>
+        <h2 class="panel-title">The Bandit Camp</h2>
+        <p class="modal-subtitle">Five tents, five bandits, each worse than the last. Take them one at a time.</p>
+        <div class="camp-status" id="camp-status"></div>
+        <div class="camp-grid" id="camp-grid"></div>
+      </section>
+
+      <section class="scene-panel screen" id="screen-hall" hidden>
+        <h2 class="panel-title">Hall of Champions</h2>
+        <p class="modal-subtitle">Banners of every hero who came before, and room yet for yours.</p>
+
+        <div class="feats-header">
+          <div id="feats-char-level"></div>
+          <div class="feats-point-summary" id="feats-point-summary"></div>
+        </div>
+
+        <div id="feats-list"></div>
+
+        <h3 class="panel-subtitle">Respec</h3>
+        <div id="feats-reset"></div>
+      </section>
+
+      <div class="side-column">
+        <section class="inventory-panel">
+          <h2 class="panel-title">Inventory</h2>
+          <div class="inventory-gold" id="inventory-gold-label">💰 0</div>
+          <div class="inventory-slots" id="inventory-slots-label"></div>
+          <div class="inventory-grid" id="inventory-grid"></div>
+        </section>
+
+        <section class="prayer-panel" id="prayer-panel">
+          <h2 class="panel-title">Prayer Buffs</h2>
+          <div class="prayer-points-row">
+            <span>Prayer Points</span>
+            <span id="prayer-points-label">0 / 0</span>
+          </div>
+          <div class="hp-bar"><div class="hp-bar-fill prayer" id="prayer-points-fill"></div></div>
+          <div class="node-list prayer-buff-list" id="prayer-buff-list"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="update-banner" id="update-banner" hidden>
+    <span class="update-banner-text" id="update-banner-text"></span>
+    <button class="modal-btn primary update-banner-btn" id="update-restart-btn" hidden>Restart &amp; update</button>
+    <button class="modal-close update-banner-close" id="update-dismiss-btn">✕</button>
+  </div>
+
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <script src="game/data.js"></script>
+  <script src="game/state.js"></script>
+  <script src="game/mining.js"></script>
+  <script src="game/woodcutting.js"></script>
+  <script src="game/smithing.js"></script>
+  <script src="game/fletching.js"></script>
+  <script src="game/cooking.js"></script>
+  <script src="game/prayer.js"></script>
+  <script src="game/monk.js"></script>
+  <script src="game/summoning.js"></script>
+  <script src="game/crafting.js"></script>
+  <script src="game/combat.js"></script>
+  <script src="game/store.js"></script>
+  <script src="game/quests.js"></script>
+  <script src="game/loadout.js"></script>
+  <script src="game/tavern.js"></script>
+  <script src="game/feats.js"></script>
+  <script src="game/bandit.js"></script>
+  <script src="game/bank.js"></script>
+  <script src="game/gate.js"></script>
+  <script src="game/world.js"></script>
+  <script src="game/home.js"></script>
+  <script src="persistence.js"></script>
+  <script src="account.js"></script>
+  <script src="updates.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

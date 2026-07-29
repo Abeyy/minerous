@@ -1,0 +1,46 @@
+# Builds Minerous for all three platforms and publishes them to a GitHub Release.
+#
+# Triggered by pushing a version tag:
+#
+#   npm version patch     # bumps package.json and creates the tag
+#   git push --follow-tags
+#
+# electron-builder reads `build.publish` in package.json, uploads the installers to
+# the release for that tag, and — importantly — also uploads the latest*.yml manifests
+# that electron-updater polls. Without those manifests the app can't detect updates.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each runner can only build its own platform's installers.
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # supabase.config.json is gitignored, so CI has no credentials file. The app
+      # treats a missing config as "cloud sync unavailable" and still runs, so builds
+      # succeed without secrets — add them here if you want cloud sync in releases.
+      - name: Build and publish
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

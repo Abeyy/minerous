@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "minerous-web-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["scripts/no-cache-server.py", "4174", "src"],
+      "port": 4174
+    }
+  ]
+}

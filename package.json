@@ -1,0 +1,66 @@
+{
+  "name": "minerous",
+  "version": "0.1.0",
+  "description": "Minerous - an idle mining & skilling game",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.9",
+    "electron-updater": "^6.8.9"
+  },
+  "build": {
+    "appId": "com.minerous.game",
+    "productName": "Minerous",
+    "files": [
+      "**/*",
+      "!.claude/**",
+      "!scripts/**",
+      "!*.md"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "REPLACE_WITH_YOUR_GITHUB_USERNAME",
+        "repo": "minerous"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    }
+  }
+}
