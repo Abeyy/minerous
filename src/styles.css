@@ -2216,6 +2216,54 @@ main {
 }
 
 /* How many a crafting run makes before stopping itself. */
+/* A familiar and its upgrade control share a grid cell. */
+.familiar-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.familiar-rank {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.familiar-effect {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.familiar-upgrade {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.familiar-upgrade-next {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.familiar-upgrade-cost {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.familiar-upgrade-cost.unmet {
+  color: var(--danger);
+}
+
+.familiar-upgrade-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--accent-2);
+}
+
 .batch-row {
   display: flex;
   align-items: center;

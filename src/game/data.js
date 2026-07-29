@@ -288,6 +288,8 @@ window.Minerous.FAMILIARS = [
     inputs: { bones: 2, raw_rat_meat: 1 },
     description: 'Fights alongside you in combat.',
     familiarAttack: { damageMin: 1, damageMax: 3, attackMs: 2400 },
+    // A beast is fed and furnished: bones and a pelt from the Hunting Grounds.
+    upgrade: { gold: 120, materials: { bones: 8, rabbit_pelt: 3 } },
   },
   {
     id: 'luck',
@@ -299,6 +301,8 @@ window.Minerous.FAMILIARS = [
     inputs: { gold: 3 },
     description: '25% chance to double or triple combat drops.',
     lootChance: 0.25,
+    // A charm of fortune wants precious metal.
+    upgrade: { gold: 200, materials: { gold: 4, silver_bar: 2 } },
   },
   {
     id: 'prayer_spirit',
@@ -310,8 +314,70 @@ window.Minerous.FAMILIARS = [
     inputs: { bones: 5 },
     description: 'Communing with the beyond — halves prayer point drain while summoned.',
     prayerDrainMultiplier: 0.5,
+    // Bones for the beyond, radiantite for the light.
+    upgrade: { gold: 260, materials: { bones: 12, radiantite: 3 } },
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Familiar ranks.
+//
+// A summoned familiar can be raised from rank 1 to 10 by offering gold and materials
+// it has an affinity for. Gold cost climbs steeply — roughly level^2.3, so the last
+// rank costs well over a hundred times the first — while material counts grow
+// linearly, which keeps the grind about gathering rather than pure arithmetic.
+//
+// Careful: `familiar.level` is the *Summoning level required to summon it* and has
+// nothing to do with rank. Rank lives in state.summoning.levels[id].
+// ---------------------------------------------------------------------------
+window.Minerous.MAX_FAMILIAR_RANK = 10;
+
+window.Minerous.getFamiliarRank = function getFamiliarRank(id) {
+  return window.Minerous.state.summoning.levels[id] || 1;
+};
+
+// Cost to go from `rank` to `rank + 1`.
+window.Minerous.getFamiliarUpgradeCost = function getFamiliarUpgradeCost(familiar, rank) {
+  const base = familiar.upgrade;
+  const gold = Math.round(base.gold * Math.pow(rank, 2.3));
+  const materials = {};
+  for (const [id, qty] of Object.entries(base.materials)) {
+    materials[id] = Math.ceil(qty * rank);
+  }
+  return { gold, materials };
+};
+
+// A copy of the familiar with its rank folded into the numbers, so combat and prayer
+// can keep reading plain fields without knowing ranks exist.
+window.Minerous.getFamiliarStats = function getFamiliarStats(familiar, rank) {
+  const bonus = Math.max(0, rank - 1);
+  const scaled = { ...familiar, rank };
+
+  if (familiar.familiarAttack) {
+    scaled.familiarAttack = {
+      ...familiar.familiarAttack,
+      damageMin: familiar.familiarAttack.damageMin + bonus,
+      damageMax: familiar.familiarAttack.damageMax + bonus,
+    };
+  }
+  if (familiar.lootChance) {
+    scaled.lootChance = Math.min(0.95, familiar.lootChance + 0.03 * bonus);
+  }
+  if (familiar.prayerDrainMultiplier) {
+    // Lower is better; floored so drain never reaches zero.
+    scaled.prayerDrainMultiplier = Math.max(0.15, familiar.prayerDrainMultiplier - 0.03 * bonus);
+  }
+  return scaled;
+};
+
+// One line describing what this rank actually does, for the summoning card.
+window.Minerous.familiarEffectText = function familiarEffectText(familiar, rank) {
+  const s = window.Minerous.getFamiliarStats(familiar, rank);
+  if (s.familiarAttack) return `${s.familiarAttack.damageMin}–${s.familiarAttack.damageMax} damage per hit`;
+  if (s.lootChance) return `${Math.round(s.lootChance * 100)}% chance to multiply drops`;
+  if (s.prayerDrainMultiplier) return `Prayer drains at ${Math.round(s.prayerDrainMultiplier * 100)}% of normal`;
+  return s.description;
+};
 
 window.Minerous.getMaxPrayerPoints = function getMaxPrayerPoints() {
   return 10 + window.Minerous.getLevel('prayer') * 2;

@@ -59,6 +59,11 @@ jobs:
         shell: bash
         run: ls -lh release
 
+      # The installer named in latest.yml must exist under exactly that name, or every
+      # update 404s while the release still looks perfectly healthy. See v0.1.2.
+      - name: Verify update manifest matches the built files
+        run: node scripts/check-release-assets.js
+
       # Attached to the Actions run itself, so the installer is downloadable even if
       # the release step fails.
       - uses: actions/upload-artifact@v4
@@ -68,12 +73,19 @@ jobs:
             release/*.exe
             release/latest.yml
 
+      # Without a body the release publishes with an empty description, which is what
+      # v0.1.1 shipped as. Pull the matching section out of CHANGELOG.md instead.
+      - name: Build release notes
+        shell: bash
+        run: node scripts/release-notes.js "${GITHUB_REF_NAME}" > release-notes.md
+
       # draft: false is the important part — a draft release is invisible to
       # electron-updater, so players would never be offered the update.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           draft: false
+          body_path: release-notes.md
           fail_on_unmatched_files: true
           files: |
             release/*.exe

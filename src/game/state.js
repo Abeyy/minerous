@@ -56,7 +56,10 @@ window.Minerous = window.Minerous || {};
     armorSocket: null,
     combat: { hp: null, autoEat: false }, // hp: null = uninitialized, lazily set to max on first use
     prayer: { points: null, activeBuffs: { offense: null, defense: null } },
-    summoning: { activeFamiliarId: null },
+    // `levels` is each familiar's upgrade rank (1-10), keyed by id. Not to be
+    // confused with FAMILIARS[].level, which is the Summoning level needed to
+    // summon it in the first place.
+    summoning: { activeFamiliarId: null, levels: {} },
     // `acceptedIds` are quests you've agreed to take on. A quest an NPC is offering
     // isn't tracked until you accept it, which is also when its counter snapshot is
     // taken — so prior grinding never counts toward a quest you hadn't agreed to.

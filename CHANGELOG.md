@@ -3,6 +3,36 @@
 Player-facing notes for each release. Paste the relevant section into the GitHub
 Release body when you publish a tag.
 
+## v0.1.3
+
+### 🔮 Familiars can be raised
+
+Your summons now have **ranks, 1 to 10**. Raise one at the Summoning Circle by
+offering gold and materials it has an affinity for, and it gets meaningfully stronger:
+
+| Familiar | Rank 1 | Rank 10 | Offering |
+| --- | --- | --- | --- |
+| Spirit Wolf | 1–3 damage | 10–12 damage | Bones + Rabbit Pelts |
+| Luck Charm | 25% to multiply drops | 52% to multiply drops | Gold Ore + Silver Bars |
+| Prayer Spirit | drain at 50% | drain at 23% | Bones + Radiantite |
+
+**The cost climbs hard.** The first rank of a Spirit Wolf is 120 gold; the last is
+nearly 19,000, and taking one wolf all the way costs around 61,000 gold plus the
+materials. This is a long-term goal, not an afternoon's work.
+
+Each card shows what the next rank buys before you pay for it, and the offering turns
+red when you can't afford it.
+
+### 🐛 Fixed
+
+- **"404 cannot download update".** The installer was being uploaded under a different
+  name than the one the updater looked for, so every update check failed even though
+  the release itself was fine. Fixed at the source, with a CI check that now fails the
+  build rather than shipping a release nobody can update to.
+- Releases now carry proper notes instead of an empty description.
+
+---
+
 ## v0.1.2
 
 ### 🏹 New skill: Hunter

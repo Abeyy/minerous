@@ -47,19 +47,31 @@ window.Minerous = window.Minerous || {};
       const unlocked = isUnlocked(familiar);
       const summoned = state.summoning.activeFamiliarId === familiar.id;
       const summoning = activeActionId === familiar.id;
+      const rank = window.Minerous.getFamiliarRank(familiar.id);
+      const maxed = rank >= window.Minerous.MAX_FAMILIAR_RANK;
+
       const btn = document.createElement('button');
       btn.className = 'node-card' + (unlocked ? '' : ' locked') + (summoned || summoning ? ' active' : '');
       btn.disabled = !unlocked;
       btn.innerHTML = `
         <span class="node-swatch" style="background:${familiar.color}"></span>
         <span class="node-card-text">
-          <div class="node-card-name">${familiar.name}${summoned ? ' · ACTIVE' : ''}</div>
+          <div class="node-card-name">${familiar.name}${
+            unlocked ? ` <span class="familiar-rank">Lv ${rank}${maxed ? ' · MAX' : ''}</span>` : ''
+          }${summoned ? ' · ACTIVE' : ''}</div>
           <div class="node-card-meta">${unlocked ? `${familiar.description}` : `Requires level ${familiar.level}`}</div>
+          ${unlocked ? `<div class="node-card-meta familiar-effect">${window.Minerous.familiarEffectText(familiar, rank)}</div>` : ''}
           ${unlocked ? `<div class="node-card-meta">${inputsLabel(familiar)} · ${familiar.xp} xp</div>` : ''}
         </span>
       `;
       btn.addEventListener('click', () => onFamiliarClick(familiar));
-      el.familiarList.appendChild(btn);
+      // The card itself is a button, so the upgrade control can't live inside it —
+      // each familiar gets a wrapper holding both.
+      const entry = document.createElement('div');
+      entry.className = 'familiar-entry';
+      entry.appendChild(btn);
+      if (unlocked) entry.appendChild(upgradeControl(familiar, rank));
+      el.familiarList.appendChild(entry);
     }
 
     if (areaFamiliars.length < FAMILIARS.length) {
@@ -68,6 +80,64 @@ window.Minerous = window.Minerous || {};
       note.textContent = 'This circle is a modest one. Binding the greater spirits takes a circle raised in the towns.';
       el.familiarList.appendChild(note);
     }
+  }
+
+  function costLabel(cost) {
+    const parts = [`${cost.gold} coins`];
+    for (const [id, qty] of Object.entries(cost.materials)) {
+      const item = getItem(id);
+      parts.push(`${qty}x ${item ? item.name : id}`);
+    }
+    return parts.join(' + ');
+  }
+
+  function canAfford(cost) {
+    return hasItems({ coins: cost.gold, ...cost.materials });
+  }
+
+  // Shows the next rank's price and what it buys, so the cost is judged against a
+  // concrete gain rather than a number in the dark.
+  function upgradeControl(familiar, rank) {
+    const wrap = document.createElement('div');
+    wrap.className = 'familiar-upgrade';
+
+    if (rank >= window.Minerous.MAX_FAMILIAR_RANK) {
+      wrap.innerHTML = '<div class="familiar-upgrade-note">Fully attuned — this bond cannot grow further.</div>';
+      return wrap;
+    }
+
+    const cost = window.Minerous.getFamiliarUpgradeCost(familiar, rank);
+    const affordable = canAfford(cost);
+    const nextEffect = window.Minerous.familiarEffectText(familiar, rank + 1);
+
+    wrap.innerHTML = `
+      <div class="familiar-upgrade-next">Lv ${rank + 1}: ${nextEffect}</div>
+      <div class="familiar-upgrade-cost${affordable ? '' : ' unmet'}">${costLabel(cost)}</div>
+    `;
+
+    const btn = document.createElement('button');
+    btn.className = 'inv-action-btn';
+    btn.textContent = `Upgrade to Lv ${rank + 1}`;
+    btn.disabled = !affordable;
+    btn.addEventListener('click', () => upgradeFamiliar(familiar, rank, cost));
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  function upgradeFamiliar(familiar, rank, cost) {
+    if (!canAfford(cost)) {
+      window.Minerous.showToast(`Not enough for the offering: ${costLabel(cost)}`);
+      return;
+    }
+    spendItems({ coins: cost.gold, ...cost.materials });
+    state.summoning.levels[familiar.id] = rank + 1;
+
+    window.Minerous.renderInventory();
+    renderFamiliarList();
+    renderFamiliarStatus();
+    window.Minerous.showToast(`${familiar.name} is now Lv ${rank + 1} — ${window.Minerous.familiarEffectText(familiar, rank + 1)}`, {
+      levelUp: true,
+    });
   }
 
   function onFamiliarClick(familiar) {
@@ -149,8 +219,14 @@ window.Minerous = window.Minerous || {};
     stop() {
       stopSummoning();
     },
+    // Returns the familiar with its rank already folded into the numbers, so combat
+    // and prayer read plain fields and never need to know ranks exist.
     getActiveFamiliar() {
-      return state.summoning.activeFamiliarId ? getFamiliar(state.summoning.activeFamiliarId) : null;
+      const id = state.summoning.activeFamiliarId;
+      if (!id) return null;
+      const familiar = getFamiliar(id);
+      if (!familiar) return null;
+      return window.Minerous.getFamiliarStats(familiar, window.Minerous.getFamiliarRank(id));
     },
     tick() {
       if (!activeActionId) return;
