@@ -1,12 +1,18 @@
 // Global namespace, loaded as a plain script (no bundler yet).
 window.Minerous = window.Minerous || {};
 
-window.Minerous.MAX_LEVEL = 99;
+window.Minerous.MAX_LEVEL = 999;
 
 window.Minerous.SKILLS = [
   { id: 'mining', name: 'Mining', icon: '⛏', color: '#4d9fd6', blurb: 'Swing a pickaxe to gather ore.' },
   { id: 'smithing', name: 'Smithing', icon: '🔨', color: '#e0b33e', blurb: 'Smelt bars and forge weapons.' },
-  { id: 'combat', name: 'Combat', icon: '⚔', color: '#d65c5c', blurb: 'Fight monsters for xp and loot.' },
+  // Displayed as Melee to sit alongside the other four styles. The id stays `combat`
+  // because it doubles as the Battlegrounds screen id (the hub routes by skill id) and is
+  // written into every save — renaming it would buy nothing a player can see.
+  { id: 'combat', name: 'Melee', icon: '⚔', color: '#d65c5c', blurb: 'Fight monsters with a blade, or bare fists.' },
+  { id: 'ranger', name: 'Ranger', icon: '🎯', color: '#7fb069', blurb: 'Loose arrows from a bow in the battlegrounds.' },
+  { id: 'cleric', name: 'Cleric', icon: '✨', color: '#e8d38a', blurb: 'Cast holy magic from a prayer book in the battlegrounds.' },
+  { id: 'gunslinger', name: 'Gunslinger', icon: '🔫', color: '#b8863f', blurb: 'Fan the hammer on a pair of revolvers in the battlegrounds.' },
   { id: 'cooking', name: 'Cooking', icon: '🍳', color: '#e0824f', blurb: 'Cook raw meat into healing food.' },
   { id: 'prayer', name: 'Prayer', icon: '🙏', color: '#c9a6e0', blurb: 'Offer bones for prayer points, then toggle combat blessings.' },
   { id: 'summoning', name: 'Summoning', icon: '🔮', color: '#4fd6c9', blurb: 'Summon otherworldly familiars to fight and assist you.' },
@@ -30,7 +36,7 @@ window.Minerous.AREAS = [
     blurb: 'A quiet riverside village where every trade can still be learned.',
     skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
     // Who lives here. NPCs are only reachable in the area they belong to.
-    npcs: ['ned', 'borca', 'clara', 'roland'],
+    npcs: ['ned', 'borca', 'clara', 'roland', 'maerin'],
     // A village can only offer so much: past these levels the ore seams, the cleric
     // spells and the summoning lore are all found in a proper town. Each entry caps
     // the level of content available here; omit `limits` to offer everything.
@@ -49,7 +55,7 @@ window.Minerous.AREAS = [
     color: '#4d9fd6',
     blurb: 'A bustling trade town on the eastern road.',
     skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
-    npcs: ['jeffries'],
+    npcs: ['jeffries', 'dunn', 'vance', 'aveline'],
     // The road is open, but the man standing on it is not. Charged every time you
     // enter until the crown replaces him.
     toll: {
@@ -114,7 +120,7 @@ window.Minerous.AREAS = [
     color: '#c9a45e',
     blurb: 'The seat of the realm. Every trade, the finest ore, and a palace at its heart.',
     skills: ['mining', 'woodcutting', 'smithing', 'fletching', 'cooking', 'crafting', 'prayer', 'monk', 'summoning', 'hunter', 'combat'],
-    npcs: ['aldric'],
+    npcs: ['aldric', 'sable', 'oren'],
     bank: true,
     store: true,
     monsters: ['sewer_lurker', 'catacomb_revenant', 'gilded_construct'],
@@ -347,6 +353,17 @@ window.Minerous.getFamiliarUpgradeCost = function getFamiliarUpgradeCost(familia
   return { gold, materials };
 };
 
+// Summoning xp for reaching `rank + 1`. Deepening a bond is summoning work, so it trains
+// the skill — and since an upgrade is a far bigger commitment than a single summon, it
+// pays out like one: the first rank is worth about six summons.
+//
+// Scaled by rank^1.4, well below the cost's rank^2.3, so late ranks stay dominated by
+// their price rather than turning into an xp shortcut. Taking all three familiars to rank
+// 10 is worth roughly 40k xp — a genuine reward, but far short of maxing the skill.
+window.Minerous.getFamiliarUpgradeXp = function getFamiliarUpgradeXp(familiar, rank) {
+  return Math.round(familiar.xp * 6 * Math.pow(rank, 1.4));
+};
+
 // A copy of the familiar with its rank folded into the numbers, so combat and prayer
 // can keep reading plain fields without knowing ranks exist.
 window.Minerous.getFamiliarStats = function getFamiliarStats(familiar, rank) {
@@ -462,11 +479,19 @@ window.Minerous.SMITHING_RECIPES = [
 
   { id: 'bronze_sword', name: 'Bronze Sword', category: 'weapon', level: 1, xp: 12, timeMs: 2400, color: '#b8834f', inputs: { bronze_bar: 2 }, damage: 2 },
   { id: 'iron_sword', name: 'Iron Sword', category: 'weapon', level: 12, xp: 20, timeMs: 2800, color: '#8a6a56', inputs: { iron_bar: 2 }, damage: 4 },
+
+  // Machined rather than forged, so they arrive with iron and don't tier up with the
+  // swords — a gunslinger's damage comes from the skill and the bullets, not the barrel.
+  { id: 'dual_revolvers', name: 'Dual Revolvers', category: 'weapon', style: 'gunslinger', level: 12, xp: 45, timeMs: 4200, color: '#8a6a56', inputs: { iron_bar: 4 }, damage: 5 },
   { id: 'silver_sword', name: 'Silver Sword', category: 'weapon', level: 18, xp: 24, timeMs: 3000, color: '#c7cdd6', inputs: { silver_bar: 2 }, damage: 5 },
   { id: 'gold_sword', name: 'Gold Sword', category: 'weapon', level: 24, xp: 30, timeMs: 3200, color: '#e0b33e', inputs: { gold_bar: 2 }, damage: 6 },
   { id: 'mithril_sword', name: 'Mithril Sword', category: 'weapon', level: 35, xp: 45, timeMs: 3600, color: '#4d6fd6', inputs: { mithril_bar: 2 }, damage: 9 },
   { id: 'adamantite_sword', name: 'Adamantite Sword', category: 'weapon', level: 45, xp: 60, timeMs: 4000, color: '#3f8f5a', inputs: { adamantite_bar: 2 }, damage: 13 },
   { id: 'runite_sword', name: 'Runite Sword', category: 'weapon', level: 55, xp: 90, timeMs: 4600, color: '#5ecbd6', inputs: { runite_bar: 2 }, damage: 18 },
+
+  // Ammunition. Cast from iron at the same level the revolvers unlock, in batches, so a
+  // gunslinger keeps one foot in the forge the way a ranger keeps one in the timberland.
+  { id: 'bullet', name: 'Bullets', category: 'ammo', level: 12, xp: 8, timeMs: 1600, color: '#9aa3ad', inputs: { iron_bar: 1 }, qty: 10 },
 ];
 
 // Armor: one helmet/platebody/platelegs per bar tier, each a flat defense (damage reduction) stat.
@@ -505,17 +530,17 @@ for (const tier of ARMOR_TIERS) {
 }
 
 // Fletching recipes: 'ammo' recipes whittle logs into a batch of arrows (qty per craft),
-// 'weapon' recipes (style: 'ranged') carve logs into bows, usable in the same weapon
-// slot as melee weapons — equipping one switches Combat's attack style to Ranged.
+// 'weapon' recipes (style: 'ranger') carve logs into bows, usable in the same weapon
+// slot as melee weapons — equipping one switches Combat's attack style to Ranger.
 window.Minerous.FLETCHING_RECIPES = [
   { id: 'arrow', name: 'Arrows', category: 'ammo', level: 1, xp: 3, timeMs: 1000, color: '#c9a06b', inputs: { log: 1 }, qty: 10 },
 
-  { id: 'shortbow', name: 'Shortbow', category: 'weapon', style: 'ranged', level: 1, xp: 10, timeMs: 2200, color: '#8a6a4a', inputs: { log: 2 }, damage: 2 },
-  { id: 'oak_shortbow', name: 'Oak Shortbow', category: 'weapon', style: 'ranged', level: 10, xp: 20, timeMs: 2600, color: '#6b4f36', inputs: { oak_log: 2 }, damage: 4 },
-  { id: 'willow_shortbow', name: 'Willow Shortbow', category: 'weapon', style: 'ranged', level: 20, xp: 30, timeMs: 3000, color: '#7a9a5a', inputs: { willow_log: 2 }, damage: 6 },
-  { id: 'maple_shortbow', name: 'Maple Shortbow', category: 'weapon', style: 'ranged', level: 30, xp: 45, timeMs: 3400, color: '#b8724f', inputs: { maple_log: 2 }, damage: 9 },
-  { id: 'yew_shortbow', name: 'Yew Shortbow', category: 'weapon', style: 'ranged', level: 40, xp: 65, timeMs: 3800, color: '#4a5a3a', inputs: { yew_log: 2 }, damage: 13 },
-  { id: 'magic_shortbow', name: 'Magic Shortbow', category: 'weapon', style: 'ranged', level: 50, xp: 95, timeMs: 4400, color: '#5ecbd6', inputs: { magic_log: 2 }, damage: 18 },
+  { id: 'shortbow', name: 'Shortbow', category: 'weapon', style: 'ranger', level: 1, xp: 10, timeMs: 2200, color: '#8a6a4a', inputs: { log: 2 }, damage: 2 },
+  { id: 'oak_shortbow', name: 'Oak Shortbow', category: 'weapon', style: 'ranger', level: 10, xp: 20, timeMs: 2600, color: '#6b4f36', inputs: { oak_log: 2 }, damage: 4 },
+  { id: 'willow_shortbow', name: 'Willow Shortbow', category: 'weapon', style: 'ranger', level: 20, xp: 30, timeMs: 3000, color: '#7a9a5a', inputs: { willow_log: 2 }, damage: 6 },
+  { id: 'maple_shortbow', name: 'Maple Shortbow', category: 'weapon', style: 'ranger', level: 30, xp: 45, timeMs: 3400, color: '#b8724f', inputs: { maple_log: 2 }, damage: 9 },
+  { id: 'yew_shortbow', name: 'Yew Shortbow', category: 'weapon', style: 'ranger', level: 40, xp: 65, timeMs: 3800, color: '#4a5a3a', inputs: { yew_log: 2 }, damage: 13 },
+  { id: 'magic_shortbow', name: 'Magic Shortbow', category: 'weapon', style: 'ranger', level: 50, xp: 95, timeMs: 4400, color: '#5ecbd6', inputs: { magic_log: 2 }, damage: 18 },
 ];
 
 window.Minerous.MONSTERS = [
@@ -671,7 +696,11 @@ window.Minerous.getItemKind = function getItemKind(idOrItem) {
   if (item.category === 'bar') return 'bar';
   if (item.category === 'ammo') return 'ammo';
   if (item.category === 'armor') return 'armor';
-  if (item.category === 'weapon') return item.style === 'ranged' ? 'bow' : 'weapon';
+  if (item.category === 'weapon') {
+    if (item.style === 'ranger') return 'bow';
+    if (item.style === 'gunslinger') return 'revolver';
+    return 'weapon';
+  }
   if (item.category === 'clothing') return 'clothing';
   if (typeof item.heal === 'number') return 'food';
   return 'misc';
@@ -684,7 +713,7 @@ window.Minerous.INVENTORY_SECTIONS = [
   { id: 'wood', name: 'Logs', kinds: ['log'] },
   { id: 'materials', name: 'Raw Materials', kinds: ['raw', 'hide', 'bone'] },
   { id: 'food', name: 'Food', kinds: ['food'] },
-  { id: 'equipment', name: 'Equipment', kinds: ['weapon', 'bow', 'ammo', 'armor', 'clothing', 'book', 'gauntlet'] },
+  { id: 'equipment', name: 'Equipment', kinds: ['weapon', 'bow', 'revolver', 'ammo', 'armor', 'clothing', 'book', 'gauntlet'] },
   { id: 'stones', name: 'Spirit Stones', kinds: ['stone'] },
   { id: 'other', name: 'Other', kinds: ['misc', 'coin'] },
 ];
@@ -791,6 +820,22 @@ window.Minerous.getBankerTier = function getBankerTier(totalGold) {
 // Everything edible, wherever it came from — used by the Eat button and auto-eat.
 window.Minerous.getFoods = function getFoods() {
   return window.Minerous.COOKING_RECIPES.concat(window.Minerous.TAVERN_FOODS, window.Minerous.STORE_GOODS);
+};
+
+// Weapons for every attack style live in different arrays — melee in SMITHING_RECIPES,
+// bows in FLETCHING_RECIPES, the prayer book in CLERIC_GEAR, gauntlets in MONK_GEAR — so
+// pool them here rather than making every caller know where each style keeps its gear.
+window.Minerous.getAllWeapons = function getAllWeapons() {
+  return [
+    ...window.Minerous.SMITHING_RECIPES.filter((r) => r.category === 'weapon'),
+    ...window.Minerous.FLETCHING_RECIPES.filter((r) => r.category === 'weapon'),
+    ...window.Minerous.CLERIC_GEAR,
+    ...window.Minerous.MONK_GEAR,
+  ];
+};
+
+window.Minerous.getAllArmor = function getAllArmor() {
+  return window.Minerous.SMITHING_RECIPES.filter((r) => r.category === 'armor');
 };
 
 // ---------------------------------------------------------------------------
@@ -1048,19 +1093,23 @@ window.Minerous.PRAYER_RECHARGE = {
 };
 
 // Worship costs no materials — just time — and is the slow-but-free way to raise
-// Prayer level, which is what unlocks Cleric spells below.
+// Prayer level, which is what unlocks blessings.
 window.Minerous.PRAYER_WORSHIP = {
   id: 'worship', name: 'Worship', category: 'worship', timeMs: 3000, xp: 8, color: '#c9a6e0', inputs: {},
 };
 
-// Cleric spells unlock automatically once Prayer reaches their level — no separate
-// "learn" step. The highest-level spell you've unlocked is cast automatically
-// whenever a Prayer Book is equipped (see combat.js).
+// Cleric spells unlock automatically once the Cleric skill reaches their level — no
+// separate "learn" step. The highest-level spell you've unlocked is cast automatically
+// whenever a Prayer Book is equipped (see combat.js). Cleric is trained by fighting with
+// the book, so casting is what teaches you to cast.
+// `animation` names a set in src/game/sprites.js. Not wired up yet — the sprite currently
+// cycles through every animation so all the artwork gets seen. This records which one
+// suits each spell for when they're tied together, same as MONK_TECHNIQUES.
 window.Minerous.CLERIC_SPELLS = [
-  { id: 'smite', name: 'Smite', level: 1, pointCost: 3, damageBonus: 2, description: 'A basic bolt of holy energy.' },
-  { id: 'holy_strike', name: 'Holy Strike', level: 15, pointCost: 5, damageBonus: 5, description: 'Focused holy force strikes true.' },
-  { id: 'divine_judgment', name: 'Divine Judgment', level: 30, pointCost: 8, damageBonus: 9, description: 'Judgment descends upon your foe.' },
-  { id: 'wrath_of_heavens', name: 'Wrath of the Heavens', level: 50, pointCost: 12, damageBonus: 15, description: 'The full fury of the divine, unleashed.' },
+  { id: 'smite', name: 'Smite', level: 1, pointCost: 3, damageBonus: 2, description: 'A basic bolt of holy energy.', animation: 'attack' },
+  { id: 'holy_strike', name: 'Holy Strike', level: 15, pointCost: 5, damageBonus: 5, description: 'Focused holy force strikes true.', animation: 'attack' },
+  { id: 'divine_judgment', name: 'Divine Judgment', level: 30, pointCost: 8, damageBonus: 9, description: 'Judgment descends upon your foe.', animation: 'spell' },
+  { id: 'wrath_of_heavens', name: 'Wrath of the Heavens', level: 50, pointCost: 12, damageBonus: 15, description: 'The full fury of the divine, unleashed.', animation: 'spell' },
 ];
 
 // A Prayer Book occupies the same weapon slot as a sword or bow — equipping one
@@ -1090,11 +1139,14 @@ window.Minerous.MONK_MEDITATION = {
 // Monk techniques are dual-gated: meditation raises the Monk level, but raw Combat
 // level gates them too — a monk has to actually fight, not just sit. The strongest
 // technique you qualify for on BOTH counts is the one you strike with.
+// `animation` names a set in src/game/sprites.js. Not wired up yet — the sprite currently
+// cycles through every animation so all the artwork gets seen. This records which one
+// suits each technique for when they're tied together.
 window.Minerous.MONK_TECHNIQUES = [
-  { id: 'palm_strike', name: 'Palm Strike', level: 1, combatLevel: 1, damageBonus: 2, description: 'A grounded, open-handed blow.' },
-  { id: 'crane_kick', name: 'Crane Kick', level: 15, combatLevel: 10, damageBonus: 5, description: 'Balanced and precise, striking high.' },
-  { id: 'tiger_fist', name: 'Tiger Fist', level: 30, combatLevel: 20, damageBonus: 9, description: 'Ferocious close-quarters mauling.' },
-  { id: 'dragon_palm', name: 'Dragon Palm', level: 50, combatLevel: 35, damageBonus: 15, description: 'The perfected form — devastating.' },
+  { id: 'palm_strike', name: 'Palm Strike', level: 1, combatLevel: 1, damageBonus: 2, description: 'A grounded, open-handed blow.', animation: 'attack' },
+  { id: 'crane_kick', name: 'Crane Kick', level: 15, combatLevel: 10, damageBonus: 5, description: 'Balanced and precise, striking high.', animation: 'kick' },
+  { id: 'tiger_fist', name: 'Tiger Fist', level: 30, combatLevel: 20, damageBonus: 9, description: 'Ferocious close-quarters mauling.', animation: 'fury' },
+  { id: 'dragon_palm', name: 'Dragon Palm', level: 50, combatLevel: 35, damageBonus: 15, description: 'The perfected form — devastating.', animation: 'special' },
 ];
 
 // Monk's Gauntlets take the weapon slot like a sword, bow, or prayer book, and
@@ -1272,6 +1324,103 @@ window.Minerous.NPCS = [
       '"One more matter, and it is not a small one."',
     ],
     guardRemark: '"Sir Tomas writes to me weekly. Dull letters. Wonderfully, gloriously dull."',
+  },
+
+  // --- Riverbend Village -----------------------------------------------------
+  {
+    id: 'maerin',
+    locationId: 'hunter',
+    name: 'Maerin the Trapper',
+    color: '#8a6a4a',
+    blurb: 'Maerin works the treeline, and has more snares out than she can walk in a day.',
+    gift: { itemId: 'rabbit_pelt', min: 1, max: 3 },
+    questTeasers: [
+      '"You move quietly enough. I could use someone who does. Interested?"',
+      '"I\'ve more lines out than legs to walk them. Say yes and I\'ll point you at one."',
+      '"There\'s something out there worrying my catch. Take the job and I\'ll say what."',
+      '"Bigger ask, this one. You\'d be earning it. Still game?"',
+    ],
+    guardRemark:
+      '"Used to be I\'d pay that Lidas gate more than the pelts fetched. Now I just walk through. Novel."',
+  },
+
+  // --- Town of Lidas ---------------------------------------------------------
+  {
+    id: 'dunn',
+    locationId: 'mining',
+    name: 'Foreman Dunn',
+    color: '#7a8290',
+    blurb: 'Dunn runs the Lidas seams, and is short of both ore and men willing to fetch it.',
+    gift: { itemId: 'iron', min: 2, max: 4 },
+    questTeasers: [
+      '"You look like you can hold a pick. There\'s work, if you want it."',
+      '"Quota\'s due and I\'m behind. Agree and I\'ll tell you what I\'m short of."',
+      '"Something\'s in the deep cut and my lads won\'t go down. Interested?"',
+      '"This one I\'d normally send three men for. You\'ll do. Yes?"',
+    ],
+    guardRemark: '"Gate\'s honest now, so my ore carts arrive with the ore still on them. Imagine."',
+  },
+  {
+    id: 'vance',
+    locationId: 'fletching',
+    name: 'Vance the Fletcher',
+    color: '#a67c52',
+    blurb: 'Vance fills the town guard\'s quivers, and never quite fast enough.',
+    gift: { itemId: 'arrow', min: 8, max: 16 },
+    questTeasers: [
+      '"Steady hands? Good. I\'ve an order I can\'t fill alone."',
+      '"The guard wants more than I can whittle. Say yes and I\'ll give you the count."',
+      '"There\'s a commission here worth taking. Details after you agree."',
+      '"This one\'s for the captain himself. No pressure. Well — some."',
+    ],
+    guardRemark: '"Sir Tomas buys his arrows and pays the asking price. Strange man. I like him."',
+  },
+  {
+    id: 'aveline',
+    locationId: 'prayer',
+    name: 'Sister Aveline',
+    color: '#c9a6e0',
+    blurb: 'Aveline keeps the Lidas temple, and the fens beyond it trouble her.',
+    gift: { itemId: 'bones', min: 3, max: 6 },
+    questTeasers: [
+      '"The temple asks something of you. Consent, and I will name it."',
+      '"There is a duty here. I would rather you accept it than weigh it."',
+      '"Something in the fens is wrong. Agree, and I will explain."',
+      '"This last thing is not gentle work. Faith rarely is."',
+    ],
+    guardRemark: '"An honest man at the gate. I said a prayer of thanks and meant every word of it."',
+  },
+
+  // --- Highcastle ------------------------------------------------------------
+  {
+    id: 'sable',
+    locationId: 'smithing',
+    name: 'Master Armourer Sable',
+    color: '#5e6b7a',
+    blurb: 'Sable arms the royal guard, and holds outsiders to the same standard as her apprentices.',
+    gift: { itemId: 'coal', min: 3, max: 6 },
+    questTeasers: [
+      '"You\'ve a smith\'s hands. Let\'s find out if you\'ve a smith\'s patience."',
+      '"I have a commission. Accept it and I\'ll hold you to the tolerances."',
+      '"The guard needs something made properly. Say yes and I\'ll specify."',
+      '"This is the piece I judge people by. Care to be judged?"',
+    ],
+    guardRemark: '"Word from Lidas is the gate\'s straight now. About time. Bribes make bad steel — bad everything."',
+  },
+  {
+    id: 'oren',
+    locationId: 'monk',
+    name: 'Grandmaster Oren',
+    color: '#d99a5b',
+    blurb: 'Oren teaches at the Highcastle monastery, and tests before he teaches.',
+    gift: { itemId: 'radiantite', min: 2, max: 4 },
+    questTeasers: [
+      '"You wish to learn. First you will do. Agree, and I will set the task."',
+      '"There is a trial. I do not describe trials before they are accepted."',
+      '"Something beneath this city needs facing. Will you face it?"',
+      '"The last test. You will not thank me for it now."',
+    ],
+    guardRemark: '"A man who refuses coin he could take has learned something. I would have him as a student."',
   },
 ];
 
@@ -1641,6 +1790,239 @@ window.Minerous.QUESTS = [
     rewardFeatId: 'justice',
     setsFlags: { corruptGuardReplaced: true },
   },
+  // --- Maerin the Trapper (Riverbend Village) --------------------------------
+  {
+    id: 'maerin_pelts',
+    npcId: 'maerin',
+    order: 1,
+    name: 'Lines Left Unwalked',
+    dialogue: '"Four rabbit pelts, whole ones — no tears where you pulled them off the snare. I sell to people who notice."',
+    requires: { rabbit_pelt: 4 },
+    rewardCoins: 25,
+    rewardXp: { skill: 'hunter', amount: 20 },
+    rewardStoneId: 'minor_precision_stone',
+    rewardAffinity: 8,
+  },
+  {
+    id: 'maerin_spiders',
+    npcId: 'maerin',
+    order: 2,
+    type: 'kill',
+    name: 'Something in the Web',
+    dialogue: '"Spiders have moved into my western line and they\'re eating better than I am. Kill six of them."',
+    requires: { spider: 6 },
+    rewardCoins: 40,
+    rewardXp: { skill: 'hunter', amount: 35 },
+    rewardStoneId: 'minor_haste_stone',
+    rewardAffinity: 12,
+  },
+  {
+    id: 'maerin_larder',
+    npcId: 'maerin',
+    order: 3,
+    name: 'Stocking the Larder',
+    dialogue: '"Winter\'s coming and I\'d rather not spend it hungry. Three roast rabbits and eight bones for the broth pot."',
+    requires: { cooked_rabbit: 3, bones: 8 },
+    rewardCoins: 70,
+    rewardXp: { skill: 'hunter', amount: 60 },
+    rewardStoneId: 'minor_vitality_stone',
+    rewardAffinity: 18,
+  },
+
+  // --- Foreman Dunn (Town of Lidas) ------------------------------------------
+  {
+    id: 'dunn_iron',
+    npcId: 'dunn',
+    order: 1,
+    name: 'Behind on Quota',
+    dialogue: '"Twelve iron ore and I\'ll stop hearing about it from the town council. Go on, the seams are right there."',
+    requires: { iron: 12 },
+    rewardCoins: 45,
+    rewardXp: { skill: 'mining', amount: 40 },
+    rewardStoneId: 'minor_power_stone',
+    rewardAffinity: 8,
+  },
+  {
+    id: 'dunn_smelt',
+    npcId: 'dunn',
+    order: 2,
+    name: 'Ore Is Not Steel',
+    dialogue: '"Rock\'s no good to the forges. Ten coal and four iron bars — smelt them yourself, I want to see you can."',
+    requires: { coal: 10, iron_bar: 4 },
+    rewardCoins: 80,
+    rewardXp: { skill: 'smithing', amount: 70 },
+    rewardStoneId: 'greater_haste_stone',
+    rewardAffinity: 14,
+  },
+  {
+    id: 'dunn_golems',
+    npcId: 'dunn',
+    order: 3,
+    type: 'kill',
+    name: 'The Deep Cut',
+    dialogue: '"Three golems came up out of the deep cut and my lads won\'t go near it. Put them down and the seam is ours again."',
+    requires: { golem: 3 },
+    rewardCoins: 140,
+    rewardXp: { skill: 'mining', amount: 120 },
+    rewardStoneId: 'greater_power_stone',
+    rewardAffinity: 20,
+  },
+
+  // --- Vance the Fletcher (Town of Lidas) ------------------------------------
+  {
+    id: 'vance_arrows',
+    npcId: 'vance',
+    order: 1,
+    name: 'Quivers to Fill',
+    dialogue: '"Sixty arrows. The guard shoots them into the fens and never brings any back, so sixty it is."',
+    requires: { arrow: 60 },
+    rewardCoins: 40,
+    rewardXp: { skill: 'fletching', amount: 35 },
+    rewardStoneId: 'minor_precision_stone',
+    rewardAffinity: 8,
+  },
+  {
+    id: 'vance_bows',
+    npcId: 'vance',
+    order: 2,
+    name: 'A Matched Pair',
+    dialogue: '"Two oak shortbows, and I want them matched — same draw, same weight. Anyone can carve one."',
+    requires: { oak_shortbow: 2 },
+    rewardCoins: 75,
+    rewardXp: { skill: 'fletching', amount: 65 },
+    rewardStoneId: 'greater_precision_stone',
+    rewardAffinity: 14,
+  },
+  {
+    id: 'vance_bandits',
+    npcId: 'vance',
+    order: 3,
+    type: 'kill',
+    name: 'Where the Arrows Went',
+    dialogue: '"Bandits have been robbing my deliveries and shooting my own arrows back at the guard. Eight of them. Use whatever you like."',
+    requires: { bandit: 8 },
+    rewardCoins: 120,
+    rewardXp: { skill: 'ranger', amount: 110 },
+    rewardStoneId: 'greater_haste_stone',
+    rewardAffinity: 20,
+  },
+
+  // --- Sister Aveline (Town of Lidas) ----------------------------------------
+  {
+    id: 'aveline_bones',
+    npcId: 'aveline',
+    order: 1,
+    name: 'The Unburied',
+    dialogue: '"Twenty bones, brought here rather than left in the mud. They were people. The altar is the least we owe them."',
+    requires: { bones: 20 },
+    rewardCoins: 50,
+    rewardXp: { skill: 'prayer', amount: 45 },
+    rewardStoneId: 'minor_ward_stone',
+    rewardAffinity: 10,
+  },
+  {
+    id: 'aveline_vigil',
+    npcId: 'aveline',
+    order: 2,
+    type: 'action',
+    name: 'A Longer Vigil',
+    dialogue: '"Worship here fifteen times. Not quickly — fifteen times properly. I will know the difference."',
+    requires: { worship: 15 },
+    rewardCoins: 90,
+    rewardXp: { skill: 'prayer', amount: 90 },
+    rewardStoneId: 'greater_ward_stone',
+    rewardAffinity: 16,
+  },
+  {
+    id: 'aveline_wisps',
+    npcId: 'aveline',
+    order: 3,
+    name: 'Lights in the Fen',
+    dialogue: '"The fen wisps are the unquiet dead wearing light. Bring me four of their essences and I can lay them to rest."',
+    requires: { wisp_essence: 4 },
+    rewardCoins: 150,
+    rewardXp: { skill: 'cleric', amount: 130 },
+    rewardStoneId: 'greater_vitality_stone',
+    rewardAffinity: 22,
+  },
+
+  // --- Master Armourer Sable (Highcastle) ------------------------------------
+  {
+    id: 'sable_mithril',
+    npcId: 'sable',
+    order: 1,
+    name: 'To Tolerance',
+    dialogue: '"Five mithril bars. Clean ones — if I can see the slag from here, you\'ll be smelting them again."',
+    requires: { mithril_bar: 5 },
+    rewardCoins: 160,
+    rewardXp: { skill: 'smithing', amount: 140 },
+    rewardStoneId: 'greater_power_stone',
+    rewardAffinity: 10,
+  },
+  {
+    id: 'sable_blade',
+    npcId: 'sable',
+    order: 2,
+    name: 'The Judging Piece',
+    dialogue: '"One adamantite sword, forged by you. This is the piece I judge smiths by, and I have failed better than you."',
+    requires: { adamantite_sword: 1 },
+    rewardCoins: 260,
+    rewardXp: { skill: 'smithing', amount: 240 },
+    rewardStoneId: 'superior_power_stone',
+    rewardAffinity: 18,
+  },
+  {
+    id: 'sable_cores',
+    npcId: 'sable',
+    order: 3,
+    name: 'What Makes Them Move',
+    dialogue: '"The gilded constructs in the undercity run on something, and I want two of them to take apart. Bring me the cores."',
+    requires: { gilded_core: 2 },
+    rewardCoins: 380,
+    rewardXp: { skill: 'crafting', amount: 200 },
+    rewardStoneId: 'superior_haste_stone',
+    rewardAffinity: 24,
+  },
+
+  // --- Grandmaster Oren (Highcastle) -----------------------------------------
+  {
+    id: 'oren_lurkers',
+    npcId: 'oren',
+    order: 1,
+    type: 'kill',
+    name: 'Below the City',
+    dialogue: '"Six sewer lurkers. Go down, come back up. What you learn on the way is the point, not the six."',
+    requires: { sewer_lurker: 6 },
+    rewardCoins: 150,
+    rewardXp: { skill: 'monk', amount: 130 },
+    rewardStoneId: 'greater_deflect_stone',
+    rewardAffinity: 10,
+  },
+  {
+    id: 'oren_gauntlets',
+    npcId: 'oren',
+    order: 2,
+    name: 'Wrapped by Your Own Hands',
+    dialogue: '"Bring me a pair of monk\'s gauntlets you made yourself. Bought ones teach the purse, not the fist."',
+    requires: { monk_gauntlets: 1 },
+    rewardCoins: 200,
+    rewardXp: { skill: 'monk', amount: 180 },
+    rewardStoneId: 'superior_deflect_stone',
+    rewardAffinity: 18,
+  },
+  {
+    id: 'oren_revenants',
+    npcId: 'oren',
+    order: 3,
+    type: 'kill',
+    name: 'What Does Not Tire',
+    dialogue: '"Five catacomb revenants. They do not tire, so you will learn to. That is the lesson."',
+    requires: { catacomb_revenant: 5 },
+    rewardCoins: 420,
+    rewardXp: { skill: 'monk', amount: 380 },
+    rewardStoneId: 'superior_vitality_stone',
+    rewardAffinity: 26,
+  },
 ];
 
 // NPC clothing: a single xp-boosting cosmetic item per NPC, unlocked only once an
@@ -1765,19 +2147,63 @@ window.Minerous.getItem = function getItem(id) {
   return null;
 };
 
-// Classic RuneScape-style experience curve: smoothly escalating xp/level.
-window.Minerous.xpForLevel = function xpForLevel(level) {
+// ---------------------------------------------------------------------------
+// Experience curve
+//
+// Levels 1-98 use the classic RuneScape formula unchanged, so every level
+// requirement in this file keeps the difficulty it was tuned for and no existing save
+// changes level. Its cost doubles every 7 levels, though, which is fine to 99 (13M xp)
+// and impossible past it — level 999 would need about 10^45 xp, far beyond what a JS
+// number holds exactly.
+//
+// So from level 99 the per-level cost stops doubling and grows as a power of the level
+// instead, anchored to what the RuneScape formula charges at 99 so the join is seamless.
+// EXTENSION_EXPONENT is the one dial for how steep the 100+ climb is:
+//
+//   exponent   xp for 999      cost of level 999
+//   1.0        6.8 billion     13.7M
+//   1.5        17.3 billion    43.4M      <- current
+//   2.0        45.9 billion    137.9M
+// ---------------------------------------------------------------------------
+const XP_KNEE = 99;
+const EXTENSION_EXPONENT = 1.5;
+
+function runescapeIncrement(level) {
+  return Math.floor(level + 300 * Math.pow(2, level / 7));
+}
+
+function levelIncrement(level) {
+  if (level < XP_KNEE) return runescapeIncrement(level);
+  return Math.floor(runescapeIncrement(XP_KNEE) * Math.pow(level / XP_KNEE, EXTENSION_EXPONENT));
+}
+
+// Cumulative xp needed for each level, built once at load. Indexed by level, so
+// XP_THRESHOLDS[1] is 0. Scanning this beats recomputing the sum: the old xpForLevel was
+// O(level) and levelForXp called it once per level from the cap down, which at a cap of
+// 999 would be half a million operations for a single level lookup.
+const XP_THRESHOLDS = (() => {
+  const thresholds = [0, 0];
   let points = 0;
-  for (let l = 1; l < level; l++) {
-    points += Math.floor(l + 300 * Math.pow(2, l / 7));
+  for (let level = 1; level < window.Minerous.MAX_LEVEL; level++) {
+    points += levelIncrement(level);
+    thresholds[level + 1] = Math.floor(points / 4);
   }
-  return Math.floor(points / 4);
+  return thresholds;
+})();
+
+window.Minerous.xpForLevel = function xpForLevel(level) {
+  if (level <= 1) return 0;
+  return XP_THRESHOLDS[Math.min(level, window.Minerous.MAX_LEVEL)];
 };
 
+// Binary search for the highest level whose threshold the xp has reached.
 window.Minerous.levelForXp = function levelForXp(xp) {
-  const max = window.Minerous.MAX_LEVEL;
-  for (let level = max; level >= 1; level--) {
-    if (xp >= window.Minerous.xpForLevel(level)) return level;
+  let low = 1;
+  let high = window.Minerous.MAX_LEVEL;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (xp >= XP_THRESHOLDS[mid]) low = mid;
+    else high = mid - 1;
   }
-  return 1;
+  return low;
 };

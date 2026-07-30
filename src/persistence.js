@@ -27,6 +27,32 @@ window.Minerous = window.Minerous || {};
     }
   }
 
+  // Skills renamed after release. The one-level-deep merge in applySaved would leave the
+  // old key sitting in skillXp and the new one at 0, quietly wiping the player's levels.
+  const RENAMED_SKILLS = { ranged: 'ranger' };
+
+  function migrateSkills(saved) {
+    for (const [oldId, newId] of Object.entries(RENAMED_SKILLS)) {
+      if (state.skillXp[oldId] === undefined) continue;
+      state.skillXp[newId] = Math.max(state.skillXp[newId] || 0, state.skillXp[oldId]);
+      delete state.skillXp[oldId];
+    }
+
+    // Cleric used to have no skill of its own — fighting with a prayer book trained
+    // Prayer, and Prayer level was what unlocked spells. Spells now key off Cleric, so
+    // seed it from Prayer rather than taking away spells a player already had.
+    //
+    // The tell is the raw save, not the merged state: a save written before the skill
+    // existed has no `cleric` key at all, while every save written since carries one. That
+    // keeps this to genuinely old saves — checking "is Cleric zero" instead would hand the
+    // levels back every load to anyone whose Cleric had been drained to zero by a failed
+    // quest.
+    const savedSkills = (saved && saved.skillXp) || {};
+    if (savedSkills.cleric === undefined) {
+      state.skillXp.cleric = Math.max(state.skillXp.cleric || 0, state.skillXp.prayer || 0);
+    }
+  }
+
   // A plain Object.assign(state, saved) would wholesale-replace nested objects
   // (e.g. state.quests) with whatever an older save has, silently dropping any
   // fields added to the defaults since — merge one level deep instead so a save
@@ -42,6 +68,7 @@ window.Minerous = window.Minerous || {};
       }
     }
     migrateRenamedItems();
+    migrateSkills(saved);
   }
 
   async function saveNow() {

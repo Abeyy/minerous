@@ -3,6 +3,7 @@
 
   const homeBtn = document.getElementById('nav-home-btn');
   const questsBtn = document.getElementById('nav-quests-btn');
+  const skillsBtn = document.getElementById('nav-skills-btn');
   const loadoutBtn = document.getElementById('nav-loadout-btn');
   const worldBtn = document.getElementById('nav-world-btn');
   const toastStack = document.getElementById('toast-stack');
@@ -12,7 +13,7 @@
   const prayerPanel = document.getElementById('prayer-panel');
 
   // Screens where the Prayer Buffs panel is just noise.
-  const NO_PRAYER_PANEL = new Set(['quests']);
+  const NO_PRAYER_PANEL = new Set(['quests', 'skills']);
 
   const screenHome = document.getElementById('screen-home');
   const screenWorld = document.getElementById('screen-world');
@@ -31,6 +32,7 @@
     combat: document.getElementById('screen-combat'),
     store: document.getElementById('screen-store'),
     quests: document.getElementById('screen-quests'),
+    skills: document.getElementById('screen-skills'),
     loadout: document.getElementById('screen-loadout'),
     witch_hut: document.getElementById('screen-witch_hut'),
     barracks: document.getElementById('screen-barracks'),
@@ -54,6 +56,7 @@
     combat: () => window.Minerous.Combat,
     store: () => window.Minerous.Store,
     quests: () => window.Minerous.Quests,
+    skills: () => window.Minerous.Skills,
     loadout: () => window.Minerous.Loadout,
     // NPC-only buildings have no mechanics of their own — their whole content is the
     // dialogue panel, which mountNpcPanel() below fills in.
@@ -195,18 +198,15 @@
         <span class="inv-slot-count">${count}${stacks > 1 ? ` <span class="inv-slot-stacks">${stacks} slots</span>` : ''}</span>
       `;
 
-      if (isWeapon) {
-        const btn = document.createElement('button');
-        btn.className = 'inv-action-btn';
-        btn.textContent = 'Equip';
-        btn.addEventListener('click', () => window.Minerous.equipWeapon(id));
-        slot.appendChild(btn);
-      } else if (isArmor) {
-        const btn = document.createElement('button');
-        btn.className = 'inv-action-btn';
-        btn.textContent = 'Equip';
-        btn.addEventListener('click', () => window.Minerous.equipArmor(id, item.slot));
-        slot.appendChild(btn);
+      // Gear is deliberately not equippable from here. The inventory panel is visible on
+      // every screen, including the Battlegrounds, so an Equip button here amounted to
+      // swapping weapons — and therefore attack style — in the middle of a fight. All
+      // equipping happens on the Loadout screen now.
+      if (isWeapon || isArmor) {
+        const note = document.createElement('span');
+        note.className = 'inv-slot-note';
+        note.textContent = 'Loadout';
+        slot.appendChild(note);
       } else if (isFood) {
         const btn = document.createElement('button');
         btn.className = 'inv-action-btn';
@@ -219,11 +219,10 @@
         });
         slot.appendChild(btn);
       } else if (isClothing) {
-        const btn = document.createElement('button');
-        btn.className = 'inv-action-btn';
-        btn.textContent = 'Equip';
-        btn.addEventListener('click', () => window.Minerous.equipClothing(id));
-        slot.appendChild(btn);
+        const note = document.createElement('span');
+        note.className = 'inv-slot-note';
+        note.textContent = 'Loadout';
+        slot.appendChild(note);
       }
 
       container.appendChild(slot);
@@ -286,7 +285,7 @@
 
   // The topbar never hides buttons — the one matching the current screen is
   // highlighted instead, so navigation stays in a fixed, predictable place.
-  const navButtons = { home: homeBtn, world: worldBtn, quests: questsBtn, loadout: loadoutBtn };
+  const navButtons = { home: homeBtn, world: worldBtn, quests: questsBtn, skills: skillsBtn, loadout: loadoutBtn };
   function updateNavActive(screenId) {
     for (const [id, btn] of Object.entries(navButtons)) {
       btn.classList.toggle('active', id === screenId);
@@ -330,12 +329,14 @@
       section.hidden = id !== screenId;
     }
     window.Minerous.renderInventory();
-    // The Quest Log is a reading screen — blessings have nothing to do with it, and
-    // the panel only pushes the log further down the page.
+    // The Quest Log and Skills tab are reading screens — blessings have nothing to do
+    // with either, and the panel only pushes their content further down the page.
     prayerPanel.hidden = NO_PRAYER_PANEL.has(screenId);
     if (!prayerPanel.hidden) window.Minerous.Prayer.renderPanel();
     const mod = skillModules[screenId]();
     mod.refresh();
+    // The class sprite sheet replaces the CSS-art figure wherever a character is drawn.
+    window.Minerous.Sprites.refresh();
     window.Minerous.Quests.clearPanel();
     mountNpcPanel(screenId);
     window.Minerous.Persistence.saveNow();
@@ -347,6 +348,7 @@
   });
   worldBtn.addEventListener('click', () => window.Minerous.switchScreen('world'));
   questsBtn.addEventListener('click', () => window.Minerous.switchScreen('quests'));
+  skillsBtn.addEventListener('click', () => window.Minerous.switchScreen('skills'));
   loadoutBtn.addEventListener('click', () => window.Minerous.switchScreen('loadout'));
 
   // Re-renders whatever's currently visible — used after a cloud save is pulled in
@@ -374,6 +376,7 @@
     // Banked gold earns wherever you are — you shouldn't have to stand in the vault
     // watching it. The Bank module renders the change if you happen to be looking.
     if (state.screen !== 'bank') window.Minerous.Bank.accrueInterest();
+    window.Minerous.Sprites.tick();
     requestAnimationFrame(tick);
   }
 

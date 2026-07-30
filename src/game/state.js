@@ -45,8 +45,12 @@ window.Minerous = window.Minerous || {};
       woodcutting: 0,
       fletching: 0,
       hunter: 0,
-      ranged: 0,
+      // The three non-melee combat styles each train their own skill, earned by
+      // fighting with that style rather than at any building.
+      ranger: 0,
+      cleric: 0,
       monk: 0,
+      gunslinger: 0,
     },
     inventory: {},
     equippedWeaponId: null,

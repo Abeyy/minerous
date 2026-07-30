@@ -19,6 +19,7 @@ window.Minerous = window.Minerous || {};
     barList: document.getElementById('smithing-bar-list'),
     weaponList: document.getElementById('smithing-weapon-list'),
     armorList: document.getElementById('smithing-armor-list'),
+    ammoList: document.getElementById('smithing-ammo-list'),
     arm: document.getElementById('smithing-character-arm'),
     anvil: document.getElementById('smithing-anvil'),
   };
@@ -40,6 +41,7 @@ window.Minerous = window.Minerous || {};
   function statLabel(recipe) {
     if (recipe.category === 'weapon') return ` · +${recipe.damage} dmg`;
     if (recipe.category === 'armor') return ` · +${recipe.defense} def`;
+    if (recipe.category === 'ammo') return ` · makes ${recipe.qty}`;
     return '';
   }
 
@@ -66,6 +68,7 @@ window.Minerous = window.Minerous || {};
     renderList(el.barList, 'bar');
     renderList(el.weaponList, 'weapon');
     renderList(el.armorList, 'armor');
+    renderList(el.ammoList, 'ammo');
   }
 
   function onRecipeClick(recipe) {
@@ -102,15 +105,19 @@ window.Minerous = window.Minerous || {};
   }
 
   function awardResult(recipe) {
+    // Ammunition is cast in batches, like the fletcher's arrows; everything else is one
+    // item per run.
+    const made = recipe.qty || 1;
+
     // Guard before spending: a full pack must never eat the inputs and drop the
     // finished item on the floor.
-    if (!window.Minerous.canCarry(recipe.id)) {
+    if (!window.Minerous.canCarry(recipe.id, made)) {
       stopSmithing();
       window.Minerous.showToast(`Inventory full — no room for ${recipe.name}. Visit a bank.`);
       return;
     }
     spendItems(recipe.inputs);
-    addItem(recipe.id, 1);
+    addItem(recipe.id, made);
     const leveledUp = addXp('smithing', recipe.xp);
 
     window.Minerous.renderInventory();

@@ -5,6 +5,7 @@ window.Minerous = window.Minerous || {};
 
   const el = {
     equippedList: document.getElementById('loadout-equipped-list'),
+    availableList: document.getElementById('loadout-available-list'),
     statsList: document.getElementById('loadout-stats-list'),
     featsHeader: document.getElementById('loadout-feats-header'),
     featsList: document.getElementById('loadout-feats-list'),
@@ -76,6 +77,79 @@ window.Minerous = window.Minerous || {};
       meta: clothing ? clothing.description : '',
       onUnequip: () => window.Minerous.unequipClothing(),
     });
+  }
+
+  // Everything wearable you're carrying, grouped by the slot it goes in. This screen is
+  // the only place gear can be equipped — the inventory panel is visible during a fight,
+  // so equipping from there meant changing weapon, and therefore attack style, mid-combat.
+  function renderAvailable() {
+    el.availableList.innerHTML = '';
+
+    const owned = (items) => items.filter((item) => (state.inventory[item.id] || 0) > 0);
+    const groups = [
+      {
+        label: 'Weapons',
+        items: owned(window.Minerous.getAllWeapons()),
+        meta: (item) => `${styleName(item)} · +${item.damage} damage`,
+        equip: (item) => window.Minerous.equipWeapon(item.id),
+      },
+      {
+        label: 'Armor',
+        items: owned(window.Minerous.getAllArmor()),
+        meta: (item) => `${item.slot} · +${item.defense} defense`,
+        equip: (item) => window.Minerous.equipArmor(item.id, item.slot),
+      },
+      {
+        label: 'Clothing',
+        items: owned(window.Minerous.CLOTHING),
+        meta: (item) => item.description,
+        equip: (item) => window.Minerous.equipClothing(item.id),
+      },
+    ];
+
+    const anything = groups.some((group) => group.items.length > 0);
+    if (!anything) {
+      const empty = document.createElement('div');
+      empty.className = 'node-list-note';
+      empty.textContent = 'Nothing spare to equip. Forge a weapon, smith some armor, or earn clothing from a townsfolk.';
+      el.availableList.appendChild(empty);
+      return;
+    }
+
+    for (const group of groups) {
+      if (group.items.length === 0) continue;
+      const heading = document.createElement('div');
+      heading.className = 'loadout-group-label';
+      heading.textContent = group.label;
+      el.availableList.appendChild(heading);
+
+      for (const item of group.items) {
+        const row = document.createElement('div');
+        row.className = 'node-card';
+        row.innerHTML = `
+          ${window.Minerous.itemSwatch(item.id)}
+          <span class="node-card-text">
+            <div class="node-card-name">${item.name}</div>
+            <div class="node-card-meta">${group.meta(item)}</div>
+          </span>
+        `;
+        const btn = document.createElement('button');
+        btn.className = 'inv-action-btn';
+        btn.textContent = 'Equip';
+        btn.addEventListener('click', () => {
+          group.equip(item);
+          window.Minerous.Loadout.refresh();
+        });
+        row.appendChild(btn);
+        el.availableList.appendChild(row);
+      }
+    }
+  }
+
+  // Weapons carry a `style` only when they aren't plain melee.
+  function styleName(item) {
+    const style = item.style || 'melee';
+    return style.charAt(0).toUpperCase() + style.slice(1);
   }
 
   function statCard(name, value, color) {
@@ -156,6 +230,7 @@ window.Minerous = window.Minerous || {};
   window.Minerous.Loadout = {
     refresh() {
       renderEquipped();
+      renderAvailable();
       renderStats();
       renderFeats();
     },

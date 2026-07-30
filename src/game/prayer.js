@@ -16,8 +16,6 @@ window.Minerous = window.Minerous || {};
     spendItems,
     getItem,
     getMaxPrayerPoints,
-    getClothingXpBonus,
-    xpForLevel,
   } = window.Minerous;
 
   let activeActionId = null;
@@ -165,38 +163,29 @@ window.Minerous = window.Minerous || {};
       <span class="node-swatch" style="background:${PRAYER_WORSHIP.color}"></span>
       <span class="node-card-text">
         <div class="node-card-name">${PRAYER_WORSHIP.name}</div>
-        <div class="node-card-meta">Free, but slow — ${PRAYER_WORSHIP.xp} xp per cycle. Raising Prayer this way unlocks Cleric spells below.</div>
+        <div class="node-card-meta">Free, but slow — ${PRAYER_WORSHIP.xp} xp per cycle. Raising Prayer this way unlocks stronger blessings.</div>
       </span>
     `;
     btn.addEventListener('click', onWorshipClick);
     el.worshipList.appendChild(btn);
   }
 
-  // Purely informational — spells unlock automatically as Prayer rises, no separate
-  // "learn" action, so these cards aren't clickable.
-  // How many more Worship cycles it'd take to reach a given level from where you are
-  // now, accounting for any equipped clothing's Prayer xp bonus.
-  function worshipsToLevel(level) {
-    const remainingXp = xpForLevel(level) - (state.skillXp.prayer || 0);
-    if (remainingXp <= 0) return 0;
-    const xpPerWorship = Math.round(PRAYER_WORSHIP.xp * (1 + getClothingXpBonus('prayer')));
-    return Math.ceil(remainingXp / Math.max(1, xpPerWorship));
-  }
-
+  // Purely informational — spells unlock automatically as the Cleric skill rises, with no
+  // separate "learn" action, so these cards aren't clickable. Cleric is trained by
+  // fighting with a prayer book equipped, not by worshipping here.
   function renderSpellList() {
     el.spellList.innerHTML = '';
     const areaSpells = window.Minerous.filterByArea('cleric_spells', CLERIC_SPELLS);
     for (const spell of areaSpells) {
-      const unlocked = getLevel('prayer') >= spell.level;
-      const worships = unlocked ? 0 : worshipsToLevel(spell.level);
+      const unlocked = getLevel('cleric') >= spell.level;
       const card = document.createElement('div');
       card.className = 'node-card no-hover' + (unlocked ? ' met' : ' locked');
       card.innerHTML = `
         <span class="node-swatch" style="background:${unlocked ? '#c9a6e0' : '#4a4f5a'}"></span>
         <span class="node-card-text">
           <div class="node-card-name">${spell.name}${unlocked ? ' · KNOWN' : ''}</div>
-          <div class="node-card-meta">${unlocked ? `${spell.description} · ${spell.pointCost} prayer pts/cast` : `Requires level ${spell.level}`}</div>
-          ${unlocked ? '' : `<div class="node-card-meta spell-progress">🙏 ~${worships} more worship${worships === 1 ? '' : 's'} to unlock</div>`}
+          <div class="node-card-meta">${unlocked ? `${spell.description} · ${spell.pointCost} prayer pts/cast` : `Requires Cleric level ${spell.level}`}</div>
+          ${unlocked ? '' : '<div class="node-card-meta spell-progress">✨ Raise Cleric by fighting with a prayer book equipped</div>'}
         </span>
       `;
       el.spellList.appendChild(card);

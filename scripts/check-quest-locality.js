@@ -18,8 +18,17 @@ function obtainableIn(area) {
   const have = new Set(['coins']);
 
   const cap = (key) => (area.limits && area.limits[key] != null ? area.limits[key] : Infinity);
+  const offers = (skill) => (area.skills || []).includes(skill);
   M.ORES.filter((o) => o.level <= cap('mining')).forEach((o) => have.add(o.id));
   M.TREES.forEach((t) => have.add(t.id));
+
+  // Hunting yields meat, hides and bones wherever the Hunting Grounds are open, which is
+  // every settlement — without this, a perfectly local quest for a pelt reads as stranded.
+  if (offers('hunter')) {
+    for (const target of M.HUNT_TARGETS) {
+      (target.drops || []).forEach((d) => have.add(d.id));
+    }
+  }
 
   const roster = M.MONSTERS.filter((m) => !m.boss && (!area.monsters || area.monsters.includes(m.id)));
   for (const m of roster) {

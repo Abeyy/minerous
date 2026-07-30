@@ -3,6 +3,152 @@
 Player-facing notes for each release. Paste the relevant section into the GitHub
 Release body when you publish a tag.
 
+## v0.1.4
+
+### ⚔ Melee has a face too, and a name
+
+Regular combat is no longer the odd one out. Fight with a sword or with bare fists and a
+pixel-art warrior stands in the scene, with an eight-frame lunging slash and a shield block.
+Every attack style now has its own sprite.
+
+**Combat is now called Melee**, to sit alongside Ranger, Cleric, Monk and Gunslinger. It's
+the same skill — your level and xp are untouched.
+
+### 🐛 Fixed
+
+- **The Auto Eat toggle drew its switch over its own label.** A stylesheet edit had left a
+  stray fragment behind that silently deleted the rule laying that control out, so it had
+  been broken since the Loadout change.
+
+### 🔮 Raising a familiar now trains Summoning
+
+Deepening a bond pays experience as well as costing gold. The first rank of a Spirit Wolf is
+worth 90 xp — about six summons — and the last is worth nearly 2,000; taking all three
+familiars to rank 10 earns roughly 40,000 xp on its own. The reward grows more slowly than
+the price, so late ranks are still bought mainly with gold. Each card shows the xp it pays
+before you commit.
+
+### 🔫 New class: Gunslinger
+
+A fifth attack style, and it comes out of the forge rather than the timberland or the
+temple. **Once you can work iron, you can make guns.**
+
+| Made at the Smithy | Needs | From |
+| --- | --- | --- |
+| **Dual Revolvers** (+5 damage) | Smithing 12 | 4 iron bars |
+| **Bullets** (batch of 10) | Smithing 12 | 1 iron bar |
+
+Both unlock at the same level as the iron sword, so the moment iron opens up, so does the
+gunslinger. Equip the revolvers from your Loadout and you fight with **Gunslinger**,
+spending a bullet per shot the way a ranger spends an arrow — and you look the part, with a
+full sprite sheet of dual shots, hip-fire bursts, trick shots and a charged blast.
+
+Gunslinger is its own skill, trained by fighting with the revolvers, and the revolvers
+don't tier up with the swords: a gunslinger's damage comes from the skill and the bullets,
+not the barrel.
+
+### 🐛 Fixed
+
+- **Smithing ignored batch sizes.** Any recipe meant to produce several items at once made
+  exactly one. Nothing shipped had a batch until now, so bullets were the first to hit it.
+
+### 🧑‍🌾 Six new townsfolk, eighteen new quests
+
+The world had four people worth talking to outside the village. Now every settlement has
+a proper population — twelve NPCs and 43 quests between them:
+
+| Where | Who | Found at |
+| --- | --- | --- |
+| Riverbend Village | Maerin the Trapper | Hunting Grounds |
+| Town of Lidas | Foreman Dunn | Mining Site |
+| Town of Lidas | Vance the Fletcher | Fletcher's Bench |
+| Town of Lidas | Sister Aveline | Temple |
+| Highcastle | Master Armourer Sable | Smithy |
+| Highcastle | Grandmaster Oren | Monastery |
+
+Lidas went from one quest-giver to four, and Highcastle from one to three. Every new
+questline is completable without leaving its own settlement.
+
+The Bandit Camp stays empty on purpose — it's a gauntlet, not a town.
+
+### 🛡 Gear is changed in the Loadout, not mid-fight
+
+You could previously swap weapon — and therefore **class** — in the middle of a fight, from
+the attack-style buttons on the combat panel or the Equip buttons in your pack. Both are
+gone.
+
+- The attack-style row on the Battlegrounds is now a **read-only badge** showing which
+  style your gear puts you in
+- The Loadout screen has a new **Available Gear** section listing every weapon, piece of
+  armor and item of clothing you're carrying, grouped by slot
+
+Eating is untouched — you can still eat from your pack anywhere, including mid-fight.
+
+### 🎯 Ranger and Cleric are real skills now
+
+Every attack style trains a skill of its own, earned by fighting in the Battlegrounds
+rather than at any building:
+
+| Style | Trains |
+| --- | --- |
+| Melee | Combat |
+| Ranger | **Ranger** (new) |
+| Cleric | **Cleric** (new) |
+| Monk | Monk |
+
+**Ranged is now called Ranger**, and it's a listed skill rather than a hidden number on
+the combat panel. Your existing Ranged level carries over untouched.
+
+**Cleric spells now unlock from your Cleric level**, not Prayer — casting is what teaches
+you to cast. Prayer goes back to being purely about blessings. If you'd already unlocked
+spells through Prayer you keep them: existing saves seed Cleric from Prayer on load, so
+nothing you'd earned disappears.
+
+The combat panel shows the level and xp of whichever style you're using, so Ranger, Cleric
+and Monk progress is visible while you fight instead of ticking up unseen.
+
+### 📊 Skills tab
+
+A new **Skills** button in the top bar lists all thirteen skills with their level and
+progress to the next, plus your Character Level and how many skills you've trained.
+
+### 📈 The level cap is now 999
+
+Every skill runs to **999** instead of stopping at 99.
+
+**Levels 1–99 are completely unchanged** — same xp for every level, so no existing save
+shifts and every recipe, spell and monster requirement keeps the difficulty it was tuned
+for. Only the ceiling moved.
+
+Past 99 the cost per level stops doubling every 7 levels (which is why 99 was the old
+ceiling — the next few levels would have run into numbers too large to count) and grows
+more gently instead. Level 100 costs 1.4M xp; level 999 costs 43M, and reaching it takes
+17.3 billion in total. This is a very long road at current xp rates.
+
+### 🥋 Your character has a face
+
+Your stick figure is gone. Equip the **Monk's Gauntlets** or a **Prayer Book** and a proper
+pixel-art character stands in every scene, mining, smithing, cooking and fighting in your
+place. Equip anything else and the old figure comes back.
+
+The **monk** works through his whole repertoire:
+
+- guard, then an open-handed palm thrust
+- step in, knee up, a high kick, then a flying kick
+- a flurry of fists that never pauses
+- crouch to gather, leap, and a palm strike that throws an energy blast
+
+The **cleric** has her own:
+
+- a staff thrust and follow-through
+- holy magic building in both hands until a sigil rings her feet
+- hands raised, healing crosses gathering overhead
+
+Every animation takes its turn for now, so you see all of it. Tying particular moves to
+particular techniques and spells is for a later version.
+
+---
+
 ## v0.1.3
 
 ### 🔮 Familiars can be raised
@@ -20,8 +166,8 @@ offering gold and materials it has an affinity for, and it gets meaningfully str
 nearly 19,000, and taking one wolf all the way costs around 61,000 gold plus the
 materials. This is a long-term goal, not an afternoon's work.
 
-Each card shows what the next rank buys before you pay for it, and the offering turns
-red when you can't afford it.
+Each card shows what the next rank buys before you pay for it, and the offering turns red
+when you can't afford it.
 
 ### 🐛 Fixed
 

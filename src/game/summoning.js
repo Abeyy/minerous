@@ -109,10 +109,12 @@ window.Minerous = window.Minerous || {};
     const cost = window.Minerous.getFamiliarUpgradeCost(familiar, rank);
     const affordable = canAfford(cost);
     const nextEffect = window.Minerous.familiarEffectText(familiar, rank + 1);
+    const xp = window.Minerous.getFamiliarUpgradeXp(familiar, rank);
 
     wrap.innerHTML = `
       <div class="familiar-upgrade-next">Lv ${rank + 1}: ${nextEffect}</div>
       <div class="familiar-upgrade-cost${affordable ? '' : ' unmet'}">${costLabel(cost)}</div>
+      <div class="familiar-upgrade-xp">+${xp} Summoning xp</div>
     `;
 
     const btn = document.createElement('button');
@@ -131,13 +133,18 @@ window.Minerous = window.Minerous || {};
     }
     spendItems({ coins: cost.gold, ...cost.materials });
     state.summoning.levels[familiar.id] = rank + 1;
+    const leveledUp = addXp('summoning', window.Minerous.getFamiliarUpgradeXp(familiar, rank));
 
     window.Minerous.renderInventory();
+    window.Minerous.renderSkillLevelRow('summoning', 'summoning');
     renderFamiliarList();
     renderFamiliarStatus();
     window.Minerous.showToast(`${familiar.name} is now Lv ${rank + 1} — ${window.Minerous.familiarEffectText(familiar, rank + 1)}`, {
       levelUp: true,
     });
+    if (leveledUp) {
+      window.Minerous.showToast(`Level up! Summoning level ${getLevel('summoning')}`, { levelUp: true });
+    }
   }
 
   function onFamiliarClick(familiar) {

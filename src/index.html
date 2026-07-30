@@ -15,6 +15,7 @@
     <div class="topbar-actions">
       <button class="home-btn" id="nav-account-btn">👤 Account</button>
       <button class="home-btn" id="nav-quests-btn">📜 Quests</button>
+      <button class="home-btn" id="nav-skills-btn">📊 Skills</button>
       <button class="home-btn" id="nav-loadout-btn">🛡️ Loadout</button>
       <button class="home-btn" id="nav-world-btn">🗺 Travel</button>
       <button class="home-btn" id="nav-home-btn">🏠 Home</button>
@@ -114,6 +115,8 @@
           <div class="xp-bar"><div class="xp-bar-fill" id="mining-xp-fill"></div></div>
           <span class="skill-level-xp" id="mining-xp-label">0 / 0 xp</span>
         </div>
+
+        <div class="npc-panel" id="mining-npc-panel" hidden></div>
 
         <div class="scene">
           <div class="scene-ground"></div>
@@ -258,6 +261,9 @@
         <div class="node-list" id="smithing-weapon-list"></div>
         <h3 class="panel-subtitle">Armor</h3>
         <div class="node-list" id="smithing-armor-list"></div>
+
+        <h3 class="panel-subtitle">Ammunition</h3>
+        <div class="node-list" id="smithing-ammo-list"></div>
       </section>
 
       <section class="scene-panel screen" id="screen-fletching" hidden>
@@ -267,6 +273,8 @@
           <div class="xp-bar"><div class="xp-bar-fill" id="fletching-xp-fill"></div></div>
           <span class="skill-level-xp" id="fletching-xp-label">0 / 0 xp</span>
         </div>
+
+        <div class="npc-panel" id="fletching-npc-panel" hidden></div>
 
         <div class="scene">
           <div class="scene-ground"></div>
@@ -426,6 +434,8 @@
           <span class="skill-level-xp" id="hunter-xp-label">0 / 0 xp</span>
         </div>
 
+        <div class="npc-panel" id="hunter-npc-panel" hidden></div>
+
         <div class="scene">
           <div class="scene-ground"></div>
           <div class="character" id="hunter-character">
@@ -470,6 +480,8 @@
           <div class="xp-bar"><div class="xp-bar-fill" id="monk-xp-fill"></div></div>
           <span class="skill-level-xp" id="monk-xp-label">0 / 0 xp</span>
         </div>
+
+        <div class="npc-panel" id="monk-npc-panel" hidden></div>
 
         <div class="scene">
           <div class="scene-ground"></div>
@@ -680,7 +692,7 @@
             <div class="weapon-status" id="combat-armor-status">Armor: None</div>
             <div class="weapon-status" id="combat-prayer-status">Active Blessings: None</div>
             <div class="weapon-status" id="combat-familiar-status">Familiar: None</div>
-            <div class="weapon-status" id="combat-ranged-level">Ranged: Level 1 (0 / 83 xp)</div>
+            <div class="weapon-status" id="combat-style-level" hidden></div>
           </div>
           <div class="combat-log-col">
             <h3 class="panel-subtitle">Combat Log</h3>
@@ -713,12 +725,23 @@
         <div class="node-list" id="store-sell-list"></div>
       </section>
 
+      <section class="scene-panel screen" id="screen-skills" hidden>
+        <h2 class="panel-title">Skills</h2>
+        <p class="modal-subtitle">Every skill you can train, wherever you are in the world.</p>
+
+        <div class="skills-summary" id="skills-summary"></div>
+        <div class="skills-grid" id="skills-grid"></div>
+      </section>
+
       <section class="scene-panel screen" id="screen-loadout" hidden>
         <h2 class="panel-title">Loadout</h2>
-        <p class="modal-subtitle">Everything you have equipped, and the combat stats it adds up to.</p>
+        <p class="modal-subtitle">Everything you have equipped, and the combat stats it adds up to. Gear is changed here — not in the middle of a fight.</p>
 
         <h3 class="panel-subtitle">Equipped</h3>
         <div class="node-list" id="loadout-equipped-list"></div>
+
+        <h3 class="panel-subtitle">Available Gear</h3>
+        <div class="node-list" id="loadout-available-list"></div>
 
         <h3 class="panel-subtitle">Combat Stats</h3>
         <div class="node-list" id="loadout-stats-list"></div>
@@ -830,6 +853,7 @@
   <script src="game/data.js"></script>
   <script src="game/state.js"></script>
   <script src="game/batch.js"></script>
+  <script src="game/sprites.js"></script>
   <script src="game/mining.js"></script>
   <script src="game/woodcutting.js"></script>
   <script src="game/smithing.js"></script>
@@ -843,6 +867,7 @@
   <script src="game/combat.js"></script>
   <script src="game/store.js"></script>
   <script src="game/quests.js"></script>
+  <script src="game/skills.js"></script>
   <script src="game/loadout.js"></script>
   <script src="game/tavern.js"></script>
   <script src="game/feats.js"></script>

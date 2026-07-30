@@ -28,10 +28,14 @@ body {
   user-select: none;
 }
 
+/* Wraps rather than overlapping: there are enough nav buttons now that a narrow window
+   can't fit the brand and all of them on one line. */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 12px 20px;
   background: var(--panel);
   border-bottom: 1px solid var(--panel-border);
@@ -53,7 +57,13 @@ body {
 .topbar-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+/* Each button keeps its icon and label on one line even when the row wraps. */
+.home-btn {
+  white-space: nowrap;
 }
 
 .home-btn {
@@ -421,62 +431,60 @@ main {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  /* Takes the leftover width and wraps internally. With five styles plus the Loadout
+     hint, the row is wide enough that without this the Auto Eat toggle gets squeezed
+     until its switch overlaps its own label. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.attack-style-btn {
+/* Read-only: which style your gear puts you in. Changing it means changing weapon, which
+   is done on the Loadout screen. */
+.attack-style-badge {
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 700;
-  cursor: pointer;
   border: 1px solid var(--panel-border);
   color: var(--text-dim);
   background: #171d27;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.attack-style-btn:hover {
-  border-color: var(--accent);
-  color: var(--text);
+.attack-style-hint {
+  align-self: center;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-dim);
 }
 
-.attack-style-btn.active.style-melee {
+.attack-style-badge.active.style-melee {
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(77, 159, 214, 0.1);
 }
 
-.attack-style-btn.active.style-ranged {
+.attack-style-badge.active.style-ranger {
   border-color: #8fae5c;
   color: #8fae5c;
   background: rgba(143, 174, 92, 0.12);
 }
 
-.attack-style-btn.active.style-cleric {
+.attack-style-badge.active.style-cleric {
   border-color: #c9a6e0;
   color: #c9a6e0;
   background: rgba(201, 166, 224, 0.12);
 }
 
-.attack-style-btn.active.style-monk {
+.attack-style-badge.active.style-monk {
   border-color: #d99a5b;
   color: #d99a5b;
   background: rgba(217, 154, 91, 0.12);
 }
 
-.attack-style-btn.shake {
-  animation: attack-style-shake 0.4s ease;
-  border-color: var(--danger);
-  color: var(--danger);
-  background: rgba(214, 92, 92, 0.12);
-}
-
-@keyframes attack-style-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
+.attack-style-badge.active.style-gunslinger {
+  border-color: #b8863f;
+  color: #d6a45c;
+  background: rgba(184, 134, 63, 0.12);
 }
 
 .auto-eat-toggle {
@@ -488,6 +496,19 @@ main {
   color: var(--text-dim);
   cursor: pointer;
   user-select: none;
+  /* Never squeezed by the style badges beside it: with five styles plus the Loadout hint
+     the row runs out of width, and a shrinking toggle draws its switch over its own
+     label. Holding its size makes the badges wrap instead. */
+  flex: 0 0 auto;
+}
+
+.auto-eat-switch,
+.auto-eat-label {
+  flex-shrink: 0;
+}
+
+.auto-eat-label {
+  white-space: nowrap;
 }
 
 .auto-eat-toggle input {
@@ -576,6 +597,31 @@ main {
 @keyframes idle-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-3px); }
+}
+
+/* Monk sprite. The sheet replaces the CSS-art figure entirely, so every limb div is
+   hidden rather than layered underneath — and the idle bob is dropped, since the
+   sheet animates its own stance. Width/height/background are set from JS once the
+   image's real frame size is known. */
+.character.sprite-character {
+  animation: none;
+  background-repeat: no-repeat;
+  /* Chunky pixel art stays crisp rather than being smoothed as it scales. */
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+}
+
+/* Finely detailed art is the opposite case: nearest-neighbour throws away more than half
+   its pixels on the way down and the result looks grainy, so let it resample smoothly. Set
+   per sheet via `smooth` in sprites.js. */
+.character.sprite-character.sprite-smooth {
+  image-rendering: auto;
+}
+
+/* The sheet draws the whole figure, so the CSS-art limbs go away — but the shadow is
+   scenery rather than anatomy, and without it the sprite reads as floating. */
+.character.sprite-character > *:not(.character-shadow) {
+  display: none;
 }
 
 .character-shadow {
@@ -1515,6 +1561,11 @@ main {
   clip-path: polygon(50% 0, 66% 26%, 56% 26%, 56% 74%, 68% 100%, 32% 100%, 44% 74%, 44% 26%, 34% 26%);
 }
 
+/* A revolver in profile: barrel out to the right, grip angled down-left. */
+.kind-revolver {
+  clip-path: polygon(4% 34%, 92% 34%, 92% 50%, 62% 50%, 58% 64%, 44% 96%, 24% 96%, 34% 62%, 16% 52%, 4% 52%);
+}
+
 .kind-armor {
   clip-path: polygon(50% 0, 100% 16%, 100% 58%, 50% 100%, 0 58%, 0 16%);
 }
@@ -2258,6 +2309,12 @@ main {
   color: var(--danger);
 }
 
+/* The xp is a reward, not a price — coloured so it doesn't read as part of the cost. */
+.familiar-upgrade-xp {
+  font-size: 11px;
+  color: var(--accent-2);
+}
+
 .familiar-upgrade-note {
   font-size: 12px;
   font-style: italic;
@@ -2440,4 +2497,136 @@ main {
   10% { opacity: 1; transform: translateY(0); }
   85% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(6px); }
+}
+
+/* ---------------------------------------------------------------------------
+   Skills tab
+   --------------------------------------------------------------------------- */
+
+.skills-summary {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.skills-summary-item {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #171d27;
+}
+
+.skills-summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+
+.skills-summary-of {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.skills-summary-label {
+  margin-top: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+/* Auto-fit rather than a fixed column count, so the grid reflows on a narrow window
+   instead of overflowing. */
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.skill-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #171d27;
+  /* Each skill's own colour, set inline per tile. */
+  border-left: 3px solid var(--skill-color, var(--accent));
+}
+
+.skill-tile-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  border-radius: 8px;
+  /* A tint of the skill colour behind its icon — readable in both directions. */
+  background: color-mix(in srgb, var(--skill-color, var(--accent)) 22%, #171d27);
+}
+
+.skill-tile-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.skill-tile-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.skill-tile-level {
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.skill-tile-max {
+  margin-left: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.skill-tile-bar {
+  margin-top: 5px;
+  height: 4px;
+  border-radius: 999px;
+  background: #232c39;
+  overflow: hidden;
+}
+
+.skill-tile-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--xp);
+}
+
+.skill-tile-xp {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Loadout: slot heading above each group of equippable items. The list is a grid, so the
+   heading has to span the whole row or it sits in a cell and shunts the first card over. */
+.loadout-group-label {
+  grid-column: 1 / -1;
+  margin: 6px 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+/* Stands where the inventory's Equip button used to, saying where equipping happens. */
+.inv-slot-note {
+  font-size: 10px;
+  font-style: italic;
+  color: var(--text-dim);
 }

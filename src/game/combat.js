@@ -5,11 +5,7 @@ window.Minerous = window.Minerous || {};
     MONSTERS,
     SKILLS,
     CLERIC_SPELLS,
-    CLERIC_GEAR,
     MONK_TECHNIQUES,
-    MONK_GEAR,
-    SMITHING_RECIPES,
-    FLETCHING_RECIPES,
     state,
     getLevel,
     addXp,
@@ -26,9 +22,10 @@ window.Minerous = window.Minerous || {};
 
   const ATTACK_STYLES = [
     { id: 'melee', label: '⚔ Melee' },
-    { id: 'ranged', label: '🏹 Ranged' },
+    { id: 'ranger', label: '🏹 Ranger' },
     { id: 'cleric', label: '🙏 Cleric' },
     { id: 'monk', label: '🧘 Monk' },
+    { id: 'gunslinger', label: '🔫 Gunslinger' },
   ];
 
   const AUTO_EAT_THRESHOLD = 0.5;
@@ -90,7 +87,7 @@ window.Minerous = window.Minerous || {};
     armorStatus: document.getElementById('combat-armor-status'),
     prayerStatus: document.getElementById('combat-prayer-status'),
     familiarStatus: document.getElementById('combat-familiar-status'),
-    rangedLevel: document.getElementById('combat-ranged-level'),
+    styleLevel: document.getElementById('combat-style-level'),
     attackStyleMenu: document.getElementById('attack-style-menu'),
     autoEatToggle: document.getElementById('combat-auto-eat-toggle'),
     log: document.getElementById('combat-log'),
@@ -141,8 +138,20 @@ window.Minerous = window.Minerous || {};
     return (weapon && weapon.style) || 'melee';
   }
 
-  function isRangedEquipped() {
-    return getWeaponStyle() === 'ranged';
+  function isRangerEquipped() {
+    return getWeaponStyle() === 'ranger';
+  }
+
+  function isGunslingerEquipped() {
+    return getWeaponStyle() === 'gunslinger';
+  }
+
+  // The consumable the equipped style spends per attack, or null for styles that don't.
+  // `madeAt` finishes the sentence "Out of bullets! ..." in the action line.
+  function ammoForStyle() {
+    if (isRangerEquipped()) return { id: 'arrow', name: 'arrows', madeAt: 'Fletch' };
+    if (isGunslingerEquipped()) return { id: 'bullet', name: 'bullets', madeAt: 'Smith' };
+    return null;
   }
 
   function isClericEquipped() {
@@ -168,15 +177,16 @@ window.Minerous = window.Minerous || {};
   // village, so a cleric fighting there falls back to the lesser ones.
   function getActiveSpell() {
     const available = window.Minerous.filterByArea('cleric_spells', CLERIC_SPELLS);
-    const known = available.filter((s) => getLevel('prayer') >= s.level);
+    const known = available.filter((s) => getLevel('cleric') >= s.level);
     return known.length ? known[known.length - 1] : null;
   }
 
   function attackSkill() {
     const style = getWeaponStyle();
-    if (style === 'ranged') return 'ranged';
-    if (style === 'cleric') return 'prayer';
+    if (style === 'ranger') return 'ranger';
+    if (style === 'cleric') return 'cleric';
     if (style === 'monk') return 'monk';
+    if (style === 'gunslinger') return 'gunslinger';
     return 'combat';
   }
 
@@ -202,7 +212,7 @@ window.Minerous = window.Minerous || {};
       window.Minerous.Prayer.getActiveBuffEffects().damageBonus +
       getWeaponSocketEffects().damageBonus +
       featEffects().damageBonus;
-    if (skill === 'prayer') {
+    if (skill === 'cleric') {
       const spell = getActiveSpell();
       bonus += spell ? spell.damageBonus : 0;
     } else if (skill === 'monk') {
@@ -240,11 +250,13 @@ window.Minerous = window.Minerous || {};
     return base * window.Minerous.restedMultiplier();
   }
 
-  // Gated by whichever combat style is further along — a ranged- or cleric-focused
+  // Gated by whichever combat style is further along — a ranger- or cleric-focused
   // player shouldn't be locked out of tougher monsters just because Combat (melee)
   // is low.
   function isUnlocked(monster) {
-    return Math.max(getLevel('combat'), getLevel('ranged'), getLevel('prayer'), getLevel('monk')) >= monster.level;
+    return Math.max(
+      getLevel('combat'), getLevel('ranger'), getLevel('cleric'), getLevel('monk'), getLevel('gunslinger')
+    ) >= monster.level;
   }
 
   function ensurePlayerHp() {
@@ -316,8 +328,10 @@ window.Minerous = window.Minerous || {};
   function renderWeaponStatus() {
     const weapon = getEquippedWeapon();
     let base = weapon ? `Weapon: ${weapon.name} (+${weapon.damage} dmg)` : 'Weapon: Fists';
-    if (weapon && weapon.style === 'ranged') {
-      base += ` [Ranged] · Arrows: ${state.inventory.arrow || 0}`;
+    if (weapon && weapon.style === 'ranger') {
+      base += ` [Ranger] · Arrows: ${state.inventory.arrow || 0}`;
+    } else if (weapon && weapon.style === 'gunslinger') {
+      base += ` [Gunslinger] · Bullets: ${state.inventory.bullet || 0}`;
     } else if (weapon && weapon.style === 'cleric') {
       const spell = getActiveSpell();
       base += spell
@@ -333,89 +347,42 @@ window.Minerous = window.Minerous || {};
     el.weaponStatus.textContent = socket ? `${base} · Socketed: ${socket.name}` : base;
   }
 
-  function renderRangedLevel() {
-    const level = getLevel('ranged');
+  // Progress in the skill the equipped style trains. Melee trains Combat, which the
+  // panel's own level row already shows, so the line only appears for the styles that
+  // have a skill of their own — otherwise Ranger, Cleric and Monk xp would tick up with
+  // nothing on screen to show it.
+  function renderStyleLevel() {
+    const skill = attackSkill();
+    if (skill === 'combat') {
+      el.styleLevel.hidden = true;
+      return;
+    }
+    el.styleLevel.hidden = false;
+    const name = (SKILLS.find((s) => s.id === skill) || {}).name || skill;
+    const level = getLevel(skill);
     const currentFloor = xpForLevel(level);
     const nextFloor = level >= MAX_LEVEL ? currentFloor : xpForLevel(level + 1);
-    const xp = state.skillXp.ranged || 0;
+    const xp = state.skillXp[skill] || 0;
     const xpLabel = level >= MAX_LEVEL ? `${xp} xp (max)` : `${xp - currentFloor} / ${nextFloor - currentFloor} xp`;
-    el.rangedLevel.textContent = `Ranged: Level ${level} (${xpLabel})`;
+    el.styleLevel.textContent = `${name}: Level ${level} (${xpLabel})`;
   }
 
-  // Weapons for every attack style live in different data arrays (melee swords in
-  // SMITHING_RECIPES, bows in FLETCHING_RECIPES, the prayer book in CLERIC_GEAR) —
-  // pool them so the quick-swap menu can look any style up generically.
-  function getAllWeapons() {
-    return [
-      ...SMITHING_RECIPES.filter((r) => r.category === 'weapon'),
-      ...FLETCHING_RECIPES.filter((r) => r.category === 'weapon'),
-      ...CLERIC_GEAR,
-      ...MONK_GEAR,
-    ];
-  }
-
-  function ownedWeaponsForStyle(styleId) {
-    return getAllWeapons().filter((w) => (w.style || 'melee') === styleId && (state.inventory[w.id] || 0) > 0);
-  }
-
-  function bestWeaponForStyle(styleId) {
-    const owned = ownedWeaponsForStyle(styleId);
-    if (owned.length === 0) return null;
-    return owned.reduce((best, w) => (w.damage > best.damage ? w : best), owned[0]);
-  }
-
-  // Melee always works (Fists needs nothing); Ranged needs an owned bow AND arrows;
-  // Cleric needs an owned Prayer Book; Monk needs owned Monk's Gauntlets.
-  function canUseStyle(styleId) {
-    if (styleId === 'melee') return true;
-    const equipped = getEquippedWeapon();
-    const hasWeapon = (equipped && equipped.style === styleId) || !!bestWeaponForStyle(styleId);
-    if (styleId === 'ranged') return hasWeapon && (state.inventory.arrow || 0) > 0;
-    if (styleId === 'cleric' || styleId === 'monk') return hasWeapon;
-    return false;
-  }
-
-  function equipBestForStyle(styleId) {
-    const equipped = getEquippedWeapon();
-    if (equipped && (equipped.style || 'melee') === styleId) return;
-    if (styleId === 'melee') {
-      const best = bestWeaponForStyle('melee');
-      if (best) window.Minerous.equipWeapon(best.id);
-      else window.Minerous.unequipWeapon();
-      return;
-    }
-    const best = bestWeaponForStyle(styleId);
-    if (best) window.Minerous.equipWeapon(best.id);
-  }
-
-  function onStyleClick(style, btn) {
-    if (getWeaponStyle() === style.id) return;
-    if (!canUseStyle(style.id)) {
-      btn.classList.remove('shake');
-      void btn.offsetWidth;
-      btn.classList.add('shake');
-      setTimeout(() => btn.classList.remove('shake'), 500);
-      window.Minerous.showToast(`You don't have the right items equipped for ${style.label.replace(/^\S+\s/, '')}!`);
-      return;
-    }
-    equipBestForStyle(style.id);
-    renderAttackStyleMenu();
-    renderWeaponStatus();
-  }
-
-  // The single most important thing on this screen for a player switching between
-  // styles: which one is actually driving their damage right now, plus a quick way
-  // to switch (if you own the right gear for it).
+  // A read-only badge of which style is driving your damage. Changing style means changing
+  // weapon, and that is deliberately not possible from here — see the Loadout screen. It
+  // used to be a quick-swap menu, which let you re-class mid-fight.
   function renderAttackStyleMenu() {
     const current = getWeaponStyle();
     el.attackStyleMenu.innerHTML = '';
     for (const style of ATTACK_STYLES) {
-      const btn = document.createElement('button');
-      btn.className = `attack-style-btn style-${style.id}` + (current === style.id ? ' active' : '');
-      btn.textContent = style.label;
-      btn.addEventListener('click', () => onStyleClick(style, btn));
-      el.attackStyleMenu.appendChild(btn);
+      const badge = document.createElement('span');
+      badge.className = `attack-style-badge style-${style.id}` + (current === style.id ? ' active' : '');
+      badge.textContent = style.label;
+      el.attackStyleMenu.appendChild(badge);
     }
+    const hint = document.createElement('span');
+    hint.className = 'attack-style-hint';
+    hint.textContent = 'Change gear in Loadout';
+    el.attackStyleMenu.appendChild(hint);
   }
 
   function getBestFood() {
@@ -573,7 +540,7 @@ window.Minerous = window.Minerous || {};
 
     // A Cleric's divine reward: a kill made with a spell fully refills prayer points,
     // so a sustained streak of kills never runs the well dry — only a slow fight does.
-    if (skill === 'prayer') {
+    if (skill === 'cleric') {
       state.prayer.points = getMaxPrayerPoints();
       window.Minerous.Prayer.renderPanel();
     }
@@ -586,11 +553,10 @@ window.Minerous = window.Minerous || {};
 
     window.Minerous.renderInventory();
     window.Minerous.renderSkillLevelRow('combat', 'combat');
-    renderRangedLevel();
+    renderStyleLevel();
 
     if (leveledUp) {
-      const skillName =
-        skill === 'ranged' ? 'Ranged' : skill === 'prayer' ? 'Prayer' : skill === 'monk' ? 'Monk' : 'Combat';
+      const skillName = (SKILLS.find((s) => s.id === skill) || {}).name || 'Combat';
       window.Minerous.showToast(`Level up! ${skillName} level ${getLevel(skill)}`, { levelUp: true });
     }
     if (lootMultiplier > 1) {
@@ -639,7 +605,7 @@ window.Minerous = window.Minerous || {};
 
     window.Minerous.renderInventory();
     window.Minerous.renderSkillLevelRow('combat', 'combat');
-    renderRangedLevel();
+    renderStyleLevel();
   }
 
   // Ends the encounter and hands the result back to whoever started it (gate.js).
@@ -663,6 +629,9 @@ window.Minerous = window.Minerous || {};
   }
 
   window.Minerous.Combat = {
+    // The hook for driving the sprite's animation from your active technique, so that
+    // dual-gate rule stays derived here rather than duplicated — not consumed yet.
+    getActiveTechnique,
     // Single source of truth for derived combat numbers — used by the Loadout screen
     // so it never has to duplicate (and risk drifting from) this module's math.
     getStats() {
@@ -692,7 +661,7 @@ window.Minerous = window.Minerous || {};
       renderPrayerStatus();
       renderFamiliarStatus();
       window.Minerous.renderSkillLevelRow('combat', 'combat');
-      renderRangedLevel();
+      renderStyleLevel();
       renderAttackStyleMenu();
       el.autoEatToggle.checked = state.combat.autoEat;
       renderHpBars();
@@ -792,14 +761,16 @@ window.Minerous = window.Minerous || {};
       }
 
       const monster = getMonster(activeMonsterId);
-      const ranged = isRangedEquipped();
       const cleric = isClericEquipped();
       const activeSpell = cleric ? getActiveSpell() : null;
-      const outOfArrows = ranged && (state.inventory.arrow || 0) <= 0;
+      // Ranger and Gunslinger both spend a consumable per shot, differing only in which
+      // one and where you make it.
+      const ammo = ammoForStyle();
+      const outOfAmmo = !!ammo && (state.inventory[ammo.id] || 0) <= 0;
       const outOfPoints = cleric && (!activeSpell || (state.prayer.points || 0) < activeSpell.pointCost);
-      const blocked = outOfArrows || outOfPoints;
-      el.actionLabel.textContent = outOfArrows
-        ? `Out of arrows! Fletch more to keep fighting the ${monster.name}.`
+      const blocked = outOfAmmo || outOfPoints;
+      el.actionLabel.textContent = outOfAmmo
+        ? `Out of ${ammo.name}! ${ammo.madeAt} more to keep fighting the ${monster.name}.`
         : outOfPoints
         ? `Out of prayer points! Commune or land a kill to keep fighting the ${monster.name}.`
         : `Fighting ${monster.name}...`;
@@ -813,14 +784,14 @@ window.Minerous = window.Minerous || {};
         // No `return` here: the familiar and monster still act this frame — only the
         // player's own attack (and its resource cost) is skipped.
         logEvent(
-          outOfArrows
-            ? `⚠ You're out of arrows! Switch attack styles or retreat from the ${monster.name}.`
-            : `⚠ You're out of prayer points! Switch attack styles or retreat from the ${monster.name}.`,
+          outOfAmmo
+            ? `⚠ You're out of ${ammo.name}! Change your loadout or retreat from the ${monster.name}.`
+            : `⚠ You're out of prayer points! Change your loadout or retreat from the ${monster.name}.`,
           'system'
         );
       } else if (now >= playerNextAttackAt) {
         playerNextAttackAt = now + playerAttackMs();
-        if (ranged) spendItems({ arrow: 1 });
+        if (ammo) spendItems({ [ammo.id]: 1 });
         if (cleric) {
           state.prayer.points = Math.max(0, state.prayer.points - activeSpell.pointCost);
           state.actions.cleric_cast = (state.actions.cleric_cast || 0) + 1;
