@@ -253,13 +253,42 @@ main {
   line-height: 1.5;
 }
 
+/* Reserved for areas you genuinely cannot enter yet — no gate to beat, just a prerequisite
+   you haven't met. Dashed and muted, to read as "not yet" rather than "you failed". */
 .area-card.locked-area {
   border-style: dashed;
 }
 
 .area-card.locked-area .skill-card-level {
-  color: var(--danger);
+  color: var(--text-dim);
   font-weight: 700;
+}
+
+/* A town with an uncleared gate. Clicking it starts the encounter that opens the road, so it
+   is the most actionable card on the screen and must not look like the locked ones — solid
+   border, accent colour, and the town's own icon rather than a padlock. */
+.area-card.contested-area {
+  border-color: var(--accent);
+}
+
+.area-card.contested-area .skill-card-level {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.area-card-icon {
+  position: relative;
+  display: inline-block;
+}
+
+/* Marks what stands between you and the town: a fight, or a gate captain's questions. */
+.area-card-badge {
+  position: absolute;
+  right: -7px;
+  bottom: -3px;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
 .gate-modal-actions {
@@ -564,6 +593,20 @@ main {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* A sentence of framing under a panel title, for a screen whose nature isn't obvious from its
+   contents — the Hunting Grounds being one, since a figure squared up to an animal reads as a
+   fight until you're told otherwise. */
+.panel-note {
+  margin: -6px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.panel-note b {
+  color: var(--xp);
 }
 
 .scene {

@@ -9,6 +9,11 @@ window.Minerous = window.Minerous || {};
 
   let dialogueMode = 'quest'; // 'quest' | 'ask' | 'trade'
   let lastAskTick = 0;
+  // What each NPC last handed over, by npc id: { qty, name }. The panel is rebuilt from
+  // scratch once a second to move the countdowns, so a message written straight into the DOM
+  // is gone before it can be read — anything the player needs to see has to be re-derivable
+  // on every render. Deliberately not saved: it's a note about the last minute, not progress.
+  const lastAskResult = {};
   // Where the NPC dialogue panel is currently mounted, and for whom.
   let activeContainer = null;
   let activeNpcId = null;
@@ -383,8 +388,18 @@ window.Minerous = window.Minerous || {};
       resultBox.textContent = `🔒 Not close enough yet (❤ ${affinity} / ${ASK_AFFINITY_THRESHOLD}). Complete more of their quests to raise affinity.`;
       askBtn.disabled = true;
     } else if (remaining > 0) {
-      resultBox.classList.add('cooldown');
-      resultBox.textContent = `⏳ Already gave you something recently — try again in ${Math.ceil(remaining / 1000)}s.`;
+      // Keep what they were given on screen for the whole cooldown, rather than replacing it
+      // with a bare timer — the countdown is the less interesting half of the message. It
+      // stays styled as a reward, too; amber "warning" colours for a gift read as a problem.
+      const got = lastAskResult[npc.id];
+      const seconds = Math.ceil(remaining / 1000);
+      if (got) {
+        resultBox.classList.add('success');
+        resultBox.textContent = `🎁 ${npc.name} gave you ${got.qty}× ${got.name} — ask again in ${seconds}s.`;
+      } else {
+        resultBox.classList.add('cooldown');
+        resultBox.textContent = `⏳ Already gave you something recently — try again in ${seconds}s.`;
+      }
       askBtn.disabled = true;
     } else {
       resultBox.classList.add('ready');
@@ -394,13 +409,15 @@ window.Minerous = window.Minerous || {};
     askBtn.addEventListener('click', () => {
       const gift = npc.gift;
       const qty = gift.min + Math.floor(Math.random() * (gift.max - gift.min + 1));
+      const name = getItem(gift.itemId).name;
       addItem(gift.itemId, qty);
       state.quests.giftCooldowns[npc.id] = Date.now() + ASK_COOLDOWN_MS;
+      lastAskResult[npc.id] = { qty, name };
       window.Minerous.renderInventory();
-      window.Minerous.showToast(`${npc.name} gave you ${qty}x ${getItem(gift.itemId).name}!`, { levelUp: true });
-      resultBox.className = 'quest-ask-result success';
-      resultBox.textContent = `🎁 Got it! ${npc.name} gave you ${qty}x ${getItem(gift.itemId).name}.`;
-      askBtn.disabled = true;
+      window.Minerous.showToast(`${npc.name} gave you ${qty}x ${name}!`, { levelUp: true });
+      // Re-render rather than writing the text here, so the message the player reads is the
+      // one the next tick would have drawn anyway — no flash, and one place formats it.
+      renderDetail();
     });
 
     container.appendChild(resultBox);

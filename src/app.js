@@ -244,58 +244,111 @@
     }
   }
 
+  // Gear coming off the character has to land somewhere, and `addItem` refuses when the
+  // pack is out of slots. Every caller below MUST respect that refusal: the item is still
+  // in the loadout at this point, and clearing the slot anyway destroys it outright.
+  // Returns whether the pack took it.
+  // You can only equip what you're carrying. Checked here rather than trusted from callers
+  // because spendItems on an id the pack doesn't hold leaves NaN in the slot, which addItem
+  // then coerces back to 1 — quietly minting a second copy of an item that was never taken.
+  function heldForEquip(id) {
+    return state.inventory[id] > 0;
+  }
+
+  // Asks canCarry rather than reading addItem's return value, so the refusal is reported
+  // once, in gear terms, instead of also tripping addItem's generic "inventory full" toast.
+  function returnToPack(id) {
+    if (window.Minerous.canCarry(id, 1)) {
+      window.Minerous.addItem(id, 1);
+      return true;
+    }
+    const item = window.Minerous.getItem(id);
+    window.Minerous.showToast(`No room for ${item ? item.name : id} — it stays equipped until you free a slot`);
+    return false;
+  }
+
   // Equipping moves the item out of the inventory and into the loadout; any item
   // it replaces is returned to the inventory. Unequipping just returns it.
+  //
+  // The new item is taken out of the pack *first*, so the slot it vacates is available to
+  // the outgoing one — otherwise a straight swap fails against a full pack even though the
+  // pack ends up no fuller than it started. If the outgoing item still won't fit (the
+  // incoming one shared a part-filled stack, so no slot came free), the whole swap is undone
+  // rather than half-applied. Putting the incoming item back always succeeds: its slot was
+  // free a moment ago.
+  //
+  // All six return a boolean so callers can tell a refusal from a success.
   window.Minerous.equipWeapon = function equipWeapon(id) {
-    if (state.equippedWeaponId) window.Minerous.addItem(state.equippedWeaponId, 1);
+    if (!heldForEquip(id)) return false;
+    const outgoing = state.equippedWeaponId;
     window.Minerous.spendItems({ [id]: 1 });
+    if (outgoing && !returnToPack(outgoing)) {
+      window.Minerous.addItem(id, 1);
+      return false;
+    }
     state.equippedWeaponId = id;
     window.Minerous.renderInventory();
     if (window.Minerous.Combat) window.Minerous.Combat.refreshWeaponStatus();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   window.Minerous.unequipWeapon = function unequipWeapon() {
-    if (!state.equippedWeaponId) return;
-    window.Minerous.addItem(state.equippedWeaponId, 1);
+    if (!state.equippedWeaponId) return false;
+    if (!returnToPack(state.equippedWeaponId)) return false;
     state.equippedWeaponId = null;
     window.Minerous.renderInventory();
     if (window.Minerous.Combat) window.Minerous.Combat.refreshWeaponStatus();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   window.Minerous.equipArmor = function equipArmor(id, slot) {
-    if (state.equippedArmor[slot]) window.Minerous.addItem(state.equippedArmor[slot], 1);
+    if (!heldForEquip(id)) return false;
+    const outgoing = state.equippedArmor[slot];
     window.Minerous.spendItems({ [id]: 1 });
+    if (outgoing && !returnToPack(outgoing)) {
+      window.Minerous.addItem(id, 1);
+      return false;
+    }
     state.equippedArmor[slot] = id;
     window.Minerous.renderInventory();
     if (window.Minerous.Combat) window.Minerous.Combat.refreshArmorStatus();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   window.Minerous.unequipArmor = function unequipArmor(slot) {
-    if (!state.equippedArmor[slot]) return;
-    window.Minerous.addItem(state.equippedArmor[slot], 1);
+    if (!state.equippedArmor[slot]) return false;
+    if (!returnToPack(state.equippedArmor[slot])) return false;
     state.equippedArmor[slot] = null;
     window.Minerous.renderInventory();
     if (window.Minerous.Combat) window.Minerous.Combat.refreshArmorStatus();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   window.Minerous.equipClothing = function equipClothing(id) {
-    if (state.equippedClothingId) window.Minerous.addItem(state.equippedClothingId, 1);
+    if (!heldForEquip(id)) return false;
+    const outgoing = state.equippedClothingId;
     window.Minerous.spendItems({ [id]: 1 });
+    if (outgoing && !returnToPack(outgoing)) {
+      window.Minerous.addItem(id, 1);
+      return false;
+    }
     state.equippedClothingId = id;
     window.Minerous.renderInventory();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   window.Minerous.unequipClothing = function unequipClothing() {
-    if (!state.equippedClothingId) return;
-    window.Minerous.addItem(state.equippedClothingId, 1);
+    if (!state.equippedClothingId) return false;
+    if (!returnToPack(state.equippedClothingId)) return false;
     state.equippedClothingId = null;
     window.Minerous.renderInventory();
     if (window.Minerous.Loadout) window.Minerous.Loadout.refresh();
+    return true;
   };
 
   // The topbar never hides buttons — the one matching the current screen is

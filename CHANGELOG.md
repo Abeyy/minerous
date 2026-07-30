@@ -45,6 +45,59 @@ without squeezing the name.
 
 ---
 
+## v0.1.6
+
+### 🗺 The next town no longer looks off-limits
+
+A town with an uncleared road showed a **padlock**, the word **"Blocked"** in red, and a dashed
+border — exactly the same treatment as places you genuinely haven't discovered. It read as
+"you can't go here", when clicking it is precisely how you get there.
+
+Those are now two different things:
+
+| | Looks like |
+| --- | --- |
+| **A road you can force** | The town's own icon with a ⚔️ or ❓ badge, a solid highlighted border, and **"Fight your way in →"** / **"Answer the gate captain →"** |
+| **Somewhere undiscovered** | Padlock, dashed border, a muted "Undiscovered" |
+
+The status line now says what clicking will do rather than describing the obstacle, and every
+travellable card ends in an arrow. Nothing about how travel works has changed — only how it
+reads.
+
+### 🏹 Hunter reads as a gathering skill now
+
+Nothing said it wasn't combat. Animals with levels, listed in cards laid out exactly like the
+Battlegrounds' monster roster, at a place called the Hunting Grounds.
+
+- The Hunting Grounds now open with a line saying what hunting is: **a gathering trade, not a
+  fight** — timed catches, nothing fights back, no way to lose
+- Quarry cards read **"Needs Hunter 12 · 20 xp · 3.2s per catch"** instead of a bare
+  "Lv 12 · 20 xp", which on the Battlegrounds means the *monster's* combat level. The time per
+  catch is there for the same reason: a duration is something a gathering action has and an
+  opponent never does
+- The hub card says **"Gathering, not combat"** outright, so it's clear before you click in
+
+### 🐛 Fixed
+
+- **"Ask Around" didn't tell you what you got.** The gift message appeared for a fraction of a
+  second and was then replaced by a bare "try again in 60s" — the dialogue panel redraws every
+  second to move its countdowns, and the redraw wiped it. The panel now keeps the gift on
+  screen for the whole cooldown: *"Ned the Blacksmith gave you 4× Copper Ore — ask again in
+  56s."* The reward is the interesting half of that sentence, so it leads.
+
+- **Gear was being destroyed by equipping with a full pack.** Swapping weapons, armour or
+  clothing while carrying 25 slots' worth of goods deleted the item coming off — permanently,
+  with only a passing "inventory full" toast to mark it. Unequipping did the same. Weapons
+  were the most painful case, since a tiered sword is a lot of ore.
+
+  Swaps now work in the first place: the incoming item leaves the pack before the outgoing
+  one returns, so a straight swap fits even at 25/25 (the pack ends up no fuller than it
+  started). Where there genuinely is no room — unequipping outright, or swapping to something
+  that shared a stack so no slot came free — the change is **refused and the item stays
+  equipped**, with a message saying so. Nothing is thrown away either way.
+
+---
+
 ## v0.1.4
 
 ### ⚔ Melee has a face too, and a name

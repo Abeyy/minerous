@@ -24,11 +24,23 @@ window.Minerous = window.Minerous || {};
         const gated = !!area.gate && !window.Minerous.Gate.isCleared(area.gate.id);
         // Some places you simply haven't heard of yet — no gate, just a prerequisite.
         const undiscovered = !!area.requiresGate && !window.Minerous.Gate.isCleared(area.requiresGate);
-        const locked = gated || undiscovered;
         const names = skillNames(area);
 
+        // An uncleared gate is the way forward, not a wall: clicking the card opens the
+        // encounter, and beating it is how you progress. So it gets its own look — the town's
+        // own icon with a challenge badge, in the accent colour. Only `undiscovered` areas,
+        // which really can't be entered yet, keep the padlock and the dashed border.
+        // `undiscovered` wins over `gated`: Highcastle has both a screening gate and a
+        // prerequisite, and you can't attempt the screening at a place you've never heard of.
+        const contested = gated && !undiscovered && !current;
+        const challenge = contested && area.gate.kind === 'quiz' ? 'quiz' : contested ? 'fight' : null;
+
         const card = document.createElement('button');
-        card.className = 'skill-card area-card' + (current ? ' current' : '') + (locked ? ' locked-area' : '');
+        card.className =
+          'skill-card area-card' +
+          (current ? ' current' : '') +
+          (contested ? ' contested-area' : '') +
+          (undiscovered ? ' locked-area' : '');
         card.style.setProperty('--skill-color', area.color);
 
         const blurb = undiscovered
@@ -40,12 +52,28 @@ window.Minerous = window.Minerous || {};
           ? `${window.Minerous.CAMP_TIERS.length} tiers of bandit · Bosses`
           : `${names.length} trades · ${names.join(', ')}${area.bosses ? ' · Bosses' : ''}`;
 
+        // Says what clicking does, rather than describing the obstacle — "Blocked" read as
+        // "you cannot go here" when it actually meant "there is something in the way, go and
+        // beat it".
+        const status = current
+          ? 'You are here'
+          : undiscovered
+          ? 'Undiscovered'
+          : challenge === 'quiz'
+          ? 'Answer the gate captain →'
+          : challenge === 'fight'
+          ? 'Fight your way in →'
+          : 'Travel here →';
+        const badge = challenge === 'quiz' ? '❓' : challenge === 'fight' ? '⚔️' : '';
+
         card.innerHTML = `
           <div class="skill-card-header">
-            <span class="skill-card-icon">${locked ? '🔒' : area.icon}</span>
+            <span class="skill-card-icon area-card-icon">${undiscovered ? '🔒' : area.icon}${
+              badge ? `<span class="area-card-badge">${badge}</span>` : ''
+            }</span>
             <div>
               <div class="skill-card-name">${undiscovered ? '???' : area.name}</div>
-              <div class="skill-card-level">${current ? 'You are here' : undiscovered ? 'Undiscovered' : gated ? 'Blocked' : 'Travel here'}</div>
+              <div class="skill-card-level">${status}</div>
             </div>
           </div>
           <div class="skill-card-blurb">${blurb}</div>

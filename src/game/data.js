@@ -20,7 +20,10 @@ window.Minerous.SKILLS = [
   { id: 'woodcutting', name: 'Woodcutting', icon: '🪓', color: '#6b8f4e', blurb: 'Chop trees for logs.' },
   { id: 'fletching', name: 'Fletching', icon: '🪶', color: '#a67c52', blurb: 'Craft bows and arrows from logs.' },
   { id: 'monk', name: 'Monk', icon: '🧘', color: '#d99a5b', blurb: 'Meditate at the monastery to master martial techniques.' },
-  { id: 'hunter', name: 'Hunter', icon: '🏹', color: '#8a6a4a', blurb: 'Track and take game for meat, bones and hides.' },
+  // The four combat skills above say "fight" or "battlegrounds" in their blurbs; this one has
+  // to work as hard in the other direction, because animals-with-levels reads as a monster
+  // roster on the hub card long before you open the screen.
+  { id: 'hunter', name: 'Hunter', icon: '🏹', color: '#8a6a4a', blurb: 'Gathering, not combat — track quarry for meat, bones and hides.' },
 ];
 
 // The world is split into areas, and which skills you can train depends on where you

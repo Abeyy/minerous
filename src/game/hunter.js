@@ -57,11 +57,20 @@ window.Minerous = window.Minerous || {};
       const btn = document.createElement('button');
       btn.className = 'node-card' + (unlocked ? '' : ' locked') + (activeTargetId === target.id ? ' active' : '');
       btn.disabled = !unlocked;
+      // A bare "Lv 1 · 8 xp" is exactly what the Battlegrounds prints under a monster, where
+      // the number is the monster's own combat level. Here it's the Hunter level you need, so
+      // it says so — and the time per catch goes alongside, since a duration is something a
+      // gathering action has and an opponent never does.
+      const seconds = (target.timeMs / 1000).toFixed(1).replace(/\.0$/, '');
       btn.innerHTML = `
         <span class="node-swatch kind-raw" style="background:${target.color}"></span>
         <span class="node-card-text">
           <div class="node-card-name">${target.name}</div>
-          <div class="node-card-meta">${unlocked ? `Lv ${target.level} · ${target.xp} xp` : `Requires level ${target.level}`}</div>
+          <div class="node-card-meta">${
+            unlocked
+              ? `Needs Hunter ${target.level} · ${target.xp} xp · ${seconds}s per catch`
+              : `Requires Hunter level ${target.level}`
+          }</div>
           ${unlocked ? `<div class="node-card-meta">${dropsLabel(target)}</div>` : ''}
         </span>
       `;
