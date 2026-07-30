@@ -60,6 +60,52 @@ window.Minerous = window.Minerous || {};
       actions.appendChild(btn);
     }
     el.gold.appendChild(actions);
+
+    // Round hundreds cover the common case; this covers the rest. Kept on its own row so
+    // the fixed-amount buttons stay a single glance.
+    const custom = document.createElement('div');
+    custom.className = 'bank-gold-actions bank-gold-custom';
+    const input = amountInput('amount', goldAmount, (v) => { goldAmount = v; });
+    custom.appendChild(input);
+    for (const [label, sign] of [['Deposit', 1], ['Withdraw', -1]]) {
+      const btn = document.createElement('button');
+      btn.className = 'inv-action-btn';
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        const amount = readAmount(input);
+        if (!amount) {
+          window.Minerous.showToast('Enter how much gold to move');
+          return;
+        }
+        moveGold(sign * amount);
+      });
+      custom.appendChild(btn);
+    }
+    el.gold.appendChild(custom);
+  }
+
+  // What the player last typed, per input, so a re-render mid-interaction doesn't wipe the
+  // field out from under them. Keyed by item id; gold gets its own.
+  let goldAmount = '';
+  const itemAmounts = new Map();
+
+  function amountInput(placeholder, value, onInput) {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'bank-amount';
+    input.min = '1';
+    input.step = '1';
+    input.placeholder = placeholder;
+    input.value = value || '';
+    input.addEventListener('input', () => onInput(input.value));
+    return input;
+  }
+
+  // An empty or nonsense field means "no custom amount given" rather than zero, so the
+  // caller can fall back to its own default.
+  function readAmount(input) {
+    const n = Math.floor(Number(input.value));
+    return Number.isFinite(n) && n > 0 ? n : 0;
   }
 
   // Positive deposits, negative withdraws. Clamped so neither side can go negative.
@@ -76,7 +122,9 @@ window.Minerous = window.Minerous || {};
     window.Minerous.showToast(move > 0 ? `Deposited ${move} gold` : `Withdrew ${-move} gold`);
   }
 
-  function itemRow(id, count, actionLabel, run, disabled, note) {
+  // `run` is handed the typed amount, or 0 when the field is empty — each caller decides
+  // what "no amount given" means for it (in both cases: as much as will move).
+  function itemRow({ id, count, actionLabel, run, disabled, note }) {
     const item = getItem(id);
     const row = document.createElement('div');
     row.className = 'node-card' + (disabled ? ' locked' : '');
@@ -87,30 +135,229 @@ window.Minerous = window.Minerous || {};
         <div class="node-card-meta">${count}${note ? ` · ${note}` : ''}</div>
       </span>
     `;
+
+    const controls = document.createElement('span');
+    controls.className = 'bank-row-actions';
+    const input = amountInput('all', itemAmounts.get(id), (v) => {
+      if (v) itemAmounts.set(id, v);
+      else itemAmounts.delete(id);
+    });
+    input.disabled = disabled;
+    input.max = String(count);
+    // Enter is the natural way to commit a typed amount.
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      run(readAmount(input));
+    });
+    controls.appendChild(input);
+
     const btn = document.createElement('button');
     btn.className = 'inv-action-btn';
     btn.textContent = actionLabel;
     btn.disabled = disabled;
-    btn.addEventListener('click', run);
-    row.appendChild(btn);
+    btn.addEventListener('click', () => run(readAmount(input)));
+    controls.appendChild(btn);
+
+    row.appendChild(controls);
     return row;
   }
 
-  function deposit(id) {
-    const count = state.inventory[id] || 0;
-    if (count <= 0) return;
-    const isNewStack = !(state.bank.items[id] > 0);
-    if (isNewStack && window.Minerous.bankSlotsUsed() >= BANK_SLOTS) {
+  // The vault's row order is the player's arrangement, kept in state.bank.order. This is
+  // the one place it's reconciled against what's actually stored, so a save written before
+  // ordering existed, or an entry emptied by a withdrawal, sorts itself out on the next
+  // render rather than needing a migration.
+  function storedOrder() {
+    if (!Array.isArray(state.bank.order)) state.bank.order = [];
+    const present = Object.keys(state.bank.items).filter((id) => state.bank.items[id] > 0);
+    const presentSet = new Set(present);
+    const kept = state.bank.order.filter((id) => presentSet.has(id));
+    const known = new Set(kept);
+    // Anything new goes on the end, where a player expects a fresh deposit to land.
+    for (const id of present) if (!known.has(id)) kept.push(id);
+    state.bank.order = kept;
+    return kept;
+  }
+
+  // Drop `id` immediately before or after `targetId`.
+  function moveStored(id, targetId, after) {
+    if (id === targetId) return false;
+    const order = storedOrder();
+    const from = order.indexOf(id);
+    if (from < 0) return false;
+    order.splice(from, 1);
+    const to = order.indexOf(targetId);
+    if (to < 0) {
+      order.splice(from, 0, id);
+      return false;
+    }
+    order.splice(after ? to + 1 : to, 0, id);
+    return true;
+  }
+
+  // Keyboard equivalent of a drag, for a focused row.
+  function nudgeStored(id, delta) {
+    const order = storedOrder();
+    const from = order.indexOf(id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= order.length) return false;
+    order.splice(from, 1);
+    order.splice(to, 0, id);
+    return true;
+  }
+
+  function clearDropMarks() {
+    for (const n of el.storedList.querySelectorAll('.drop-before, .drop-after')) {
+      n.classList.remove('drop-before', 'drop-after');
+    }
+  }
+
+  // The vault is a grid flowing left to right and wrapping, so a drop lands before or after
+  // a tile according to which half of it the pointer is in horizontally — the same axis the
+  // order itself runs along. (Vertical midpoints would only work in a single column.)
+  function dropsAfter(tile, clientX) {
+    const box = tile.getBoundingClientRect();
+    return clientX > box.left + box.width / 2;
+  }
+
+  // The tile under the pointer, or failing that the nearest one — so a drop into the gap
+  // between two tiles still goes where it obviously meant to.
+  function tileUnder(clientX, clientY) {
+    const tiles = [...el.storedList.querySelectorAll('.node-card')];
+    let nearest = null;
+    let best = Infinity;
+    for (const n of tiles) {
+      const box = n.getBoundingClientRect();
+      if (clientX >= box.left && clientX <= box.right && clientY >= box.top && clientY <= box.bottom) {
+        return n;
+      }
+      const dx = clientX - (box.left + box.width / 2);
+      const dy = clientY - (box.top + box.height / 2);
+      const dist = dx * dx + dy * dy;
+      if (dist < best) {
+        best = dist;
+        nearest = n;
+      }
+    }
+    return nearest;
+  }
+
+  // How far the pointer must travel before this counts as a drag rather than a click. Keeps
+  // a slightly shaky click on a row from rearranging the vault behind the player's back.
+  const DRAG_THRESHOLD = 4;
+
+  const ARROW_DELTA = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
+
+  // Dragging is built on pointer events rather than HTML5 drag-and-drop. Same feel with a
+  // mouse, but it also works under a finger, and there's no dataTransfer to fight.
+  function makeReorderable(row, id) {
+    row.tabIndex = 0;
+
+    row.addEventListener('pointerdown', (e) => {
+      // The amount field and the button are controls in their own right.
+      if (e.button !== 0 || e.target.closest('.bank-row-actions')) return;
+      // Focus by hand, since preventDefault (which stops the row's text being selected as
+      // the pointer moves) would otherwise suppress it — and focus is what the arrow keys
+      // need.
+      row.focus();
+      e.preventDefault();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let dragging = false;
+      let target = null;
+
+      const onMove = (move) => {
+        if (!dragging) {
+          // Distance in either direction, now that tiles sit side by side as well as
+          // stacked — a purely horizontal drag is a real drag.
+          const dx = move.clientX - startX;
+          const dy = move.clientY - startY;
+          if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+          dragging = true;
+          row.classList.add('dragging');
+        }
+        const over = tileUnder(move.clientX, move.clientY);
+        clearDropMarks();
+        target = null;
+        if (!over || over.dataset.bankId === id) return;
+        const after = dropsAfter(over, move.clientX);
+        over.classList.add(after ? 'drop-after' : 'drop-before');
+        target = { id: over.dataset.bankId, after };
+      };
+
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        row.classList.remove('dragging');
+        clearDropMarks();
+        if (!target || !moveStored(id, target.id, target.after)) return;
+        render();
+        focusStoredRow(id);
+      };
+
+      // Tracked on the window, not the row: the pointer leaves the row immediately, that
+      // being the whole point of a drag. Capture is requested as well so the row keeps
+      // receiving events even over an iframe or a scrollbar, but it's an optimisation, not
+      // load-bearing — a browser that refuses it still gets a working drag.
+      try {
+        if (row.setPointerCapture) row.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* no capture available; the window listeners below are enough */
+      }
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    });
+
+    // All four arrows move a tile one place along the order. Left/Right is the intuitive
+    // pair in a grid; Up/Down are kept because they're what a list-shaped thing invites, and
+    // in a grid one place back or forward often is the row above or below.
+    row.addEventListener('keydown', (e) => {
+      const delta = ARROW_DELTA[e.key] || 0;
+      if (!delta) return;
+      e.preventDefault();
+      if (!nudgeStored(id, delta)) return;
+      render();
+      focusStoredRow(id);
+    });
+  }
+
+  // Re-rendering throws away the element that had focus, so put it back on the row that
+  // moved — otherwise a second arrow press would do nothing.
+  function focusStoredRow(id) {
+    const row = el.storedList.querySelector(`[data-bank-id="${id}"]`);
+    if (row) row.focus();
+  }
+
+  function depositBlocked(id) {
+    return !(state.bank.items[id] > 0) && window.Minerous.bankSlotsUsed() >= BANK_SLOTS;
+  }
+
+  // `amount` of 0 means everything held.
+  function deposit(id, amount) {
+    const held = state.inventory[id] || 0;
+    if (held <= 0) return;
+    if (depositBlocked(id)) {
       window.Minerous.showToast('The vault is full — withdraw or sell something first');
       return;
     }
-    state.bank.items[id] = (state.bank.items[id] || 0) + count;
-    delete state.inventory[id];
+
+    const moved = Math.min(amount > 0 ? amount : held, held);
+    state.bank.items[id] = (state.bank.items[id] || 0) + moved;
+    if (moved >= held) delete state.inventory[id];
+    else state.inventory[id] = held - moved;
+    itemAmounts.delete(id);
+
     window.Minerous.renderInventory();
     render();
+    const item = getItem(id);
+    window.Minerous.showToast(`Deposited ${moved} ${item ? item.name : id}`);
   }
 
-  function withdraw(id) {
+  // `amount` of 0 means as much as the pack will take.
+  function withdraw(id, amount) {
     const stored = state.bank.items[id] || 0;
     if (stored <= 0) return;
 
@@ -122,22 +369,27 @@ window.Minerous = window.Minerous || {};
       return;
     }
 
-    const taken = Math.min(stored, room);
+    const wanted = Math.min(amount > 0 ? amount : stored, stored);
+    const taken = Math.min(wanted, room);
     addItem(id, taken);
     if (taken >= stored) delete state.bank.items[id];
     else state.bank.items[id] = stored - taken;
+    itemAmounts.delete(id);
 
     window.Minerous.renderInventory();
     render();
     const item = getItem(id);
-    if (taken < stored) {
-      window.Minerous.showToast(`Withdrew ${taken} ${item ? item.name : id} — pack full, ${stored - taken} left in the vault`);
+    const name = item ? item.name : id;
+    if (taken < wanted) {
+      window.Minerous.showToast(`Withdrew ${taken} ${name} — pack full, ${stored - taken} left in the vault`);
+    } else {
+      window.Minerous.showToast(`Withdrew ${taken} ${name}`);
     }
   }
 
   function renderLists() {
     const held = Object.entries(state.inventory).filter(([id, n]) => id !== 'coins' && n > 0);
-    const stored = Object.entries(state.bank.items).filter(([, n]) => n > 0);
+    const stored = storedOrder();
 
     el.heldHeading.textContent = `On You — ${window.Minerous.inventorySlotsUsed()} / ${INVENTORY_SLOTS} slots`;
     // The vault holds a whole hoard per entry, no stack limit — that's the point of it.
@@ -147,12 +399,17 @@ window.Minerous = window.Minerous || {};
     if (held.length === 0) {
       el.heldList.innerHTML = '<div class="node-list-note">Your pack is empty.</div>';
     } else {
-      const vaultFull = stored.length >= BANK_SLOTS;
       for (const [id, count] of held) {
-        const newStack = !(state.bank.items[id] > 0);
-        const blocked = vaultFull && newStack;
+        const blocked = depositBlocked(id);
         el.heldList.appendChild(
-          itemRow(id, count, 'Deposit', () => deposit(id), blocked, blocked ? 'vault full' : '')
+          itemRow({
+            id,
+            count,
+            actionLabel: 'Deposit',
+            run: (amount) => deposit(id, amount),
+            disabled: blocked,
+            note: blocked ? 'vault full' : '',
+          })
         );
       }
     }
@@ -160,22 +417,30 @@ window.Minerous = window.Minerous || {};
     el.storedList.innerHTML = '';
     if (stored.length === 0) {
       el.storedList.innerHTML = '<div class="node-list-note">Nothing stored yet.</div>';
-    } else {
-      for (const [id, count] of stored) {
-        const room = window.Minerous.carryCapacityFor(id);
-        const blocked = room <= 0;
-        const partial = !blocked && room < count;
-        el.storedList.appendChild(
-          itemRow(
-            id,
-            count,
-            'Withdraw',
-            () => withdraw(id),
-            blocked,
-            blocked ? 'pack full' : partial ? `only ${room} will fit` : ''
-          )
-        );
-      }
+      return;
+    }
+    for (const id of stored) {
+      const count = state.bank.items[id];
+      const room = window.Minerous.carryCapacityFor(id);
+      const blocked = room <= 0;
+      const partial = !blocked && room < count;
+      const row = itemRow({
+        id,
+        count,
+        actionLabel: 'Withdraw',
+        run: (amount) => withdraw(id, amount),
+        disabled: blocked,
+        note: blocked ? 'pack full' : partial ? `only ${room} will fit` : '',
+      });
+      row.dataset.bankId = id;
+      // A full pack blocks withdrawing, not rearranging.
+      makeReorderable(row, id);
+      const grip = document.createElement('span');
+      grip.className = 'bank-grip';
+      grip.textContent = '⠿';
+      grip.title = 'Drag to reorder, or focus the row and use the arrow keys';
+      row.prepend(grip);
+      el.storedList.appendChild(row);
     }
   }
 
@@ -207,6 +472,12 @@ window.Minerous = window.Minerous || {};
 
   window.Minerous.Bank = {
     accrueInterest,
+    // Used by the inventory panel's Deposit buttons, which are only shown while the vault
+    // is open. Routed through here so the vault lists redraw with the pack.
+    depositBlocked,
+    deposit(id, amount) {
+      deposit(id, amount || 0);
+    },
     refresh() {
       // A new visit, a new opening line.
       lineIndex += 1;

@@ -41,6 +41,13 @@ NEUTRAL = 14
 FRAME_GAP = 2
 PAD = 6
 
+# The finished sheet is resampled so a cell is about this tall. The game draws a cell at
+# roughly 118px, so this leaves a 2x margin for high-density screens while keeping the
+# runtime scale near 1. Her cells are the largest of any sheet — 323px against 118px drawn —
+# and shrinking that by nearly two thirds with nearest-neighbour sampling throws away most of
+# the pixels and looks grainy. Downscaling here, with a proper filter, is the fix.
+OUTPUT_CELL_HEIGHT = 240
+
 ROW_NAMES = ['idle', 'attack', 'spell', 'heal']
 
 
@@ -196,15 +203,26 @@ def main():
             dy = ground - y1
             dest_x = int(round(ci * cellw + cellw / 2 - anchor))
             dest_y = int(round((ri + 1) * cellh - PAD - dy - sh))
-            dest_x = max(ci * cellw, min(dest_x, (ci + 1) * cellw - sw))
-            dest_y = max(ri * cellh, min(dest_y, (ri + 1) * cellh - sh))
+            # Clamp inside the padding, not just inside the cell: the lower-body anchor can
+            # push a wide pose flush against the edge, and a frame flush with its cell bleeds
+            # a sliver of its neighbour once the sheet is scaled.
+            dest_x = max(ci * cellw + PAD, min(dest_x, (ci + 1) * cellw - PAD - sw))
+            dest_y = max(ri * cellh + PAD, min(dest_y, (ri + 1) * cellh - PAD - sh))
 
             region = out[dest_y:dest_y + sh, dest_x:dest_x + sw]
             region[..., :3] = np.where(mask[..., None], px, region[..., :3])
             region[..., 3] = np.where(mask, 255, region[..., 3])
 
-    Image.fromarray(out, 'RGBA').save(DEST)
-    print(f'wrote {DEST}: {cellw * cols}x{cellh * len(rows)}')
+    sheet = Image.fromarray(out, 'RGBA')
+    if cellh > OUTPUT_CELL_HEIGHT:
+        factor = OUTPUT_CELL_HEIGHT / cellh
+        sheet = sheet.resize(
+            (max(1, round(sheet.width * factor)), max(1, round(sheet.height * factor))),
+            Image.LANCZOS,
+        )
+        print(f'resampled by {factor:.3f} to {sheet.width}x{sheet.height}')
+    sheet.save(DEST)
+    print(f'wrote {DEST}: {sheet.width}x{sheet.height}')
     for ri, (name, frames) in enumerate(zip(ROW_NAMES, rows)):
         idx = [ri * cols + c for c in range(len(frames))]
         print(f'  {name}: frames {idx[0]}-{idx[-1]}' +

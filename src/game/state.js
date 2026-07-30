@@ -24,7 +24,10 @@ window.Minerous = window.Minerous || {};
     affinityBonus: {},
     // Vault storage. Separate from inventory so its slot limit is its own, and gold
     // held here earns interest while the carried purse does not.
-    bank: { items: {}, gold: 0, lastInterestAt: 0 },
+    // `order` is the player's own arrangement of the vault rows. It holds ids only —
+    // `items` stays the sole record of what is actually stored — so a stale or missing
+    // entry is a cosmetic problem the vault reconciles on render, never lost goods.
+    bank: { items: {}, gold: 0, lastInterestAt: 0, order: [] },
     // Wall-clock ms when the tavern's rested bonus wears off. Saved deliberately: a
     // night's sleep should still be ticking down when you come back to the game.
     restedUntil: 0,

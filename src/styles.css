@@ -1702,6 +1702,122 @@ main {
   gap: 8px;
 }
 
+.bank-gold-custom {
+  margin-top: 8px;
+  align-items: center;
+}
+
+.bank-reorder-hint {
+  margin: -6px 0 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* The vault stays a grid, like every other node list — but its cells now hold an amount
+   field and a button as well as the item, which won't fit beside the name at the usual
+   140px. So the cells go a little wider and the contents stack: swatch and name on top,
+   controls underneath. */
+#bank-held-list,
+#bank-stored-list {
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+}
+
+#bank-held-list .node-card,
+#bank-stored-list .node-card {
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+#bank-held-list .node-card-text,
+#bank-stored-list .node-card-text {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+/* Amount field plus its button, side by side across the foot of the tile. */
+.bank-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.bank-amount {
+  /* Shares the tile's width with the button rather than claiming a fixed slice of it. */
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: #0e1218;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+/* The gold field isn't in a tile, so it needs a width of its own — and gold runs to six
+   figures where item counts stop at four. */
+.bank-gold-custom .bank-amount {
+  flex: 0 0 auto;
+  width: 96px;
+}
+
+.bank-amount:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.bank-amount:disabled {
+  opacity: 0.4;
+}
+
+/* The vault tiles are drag-to-reorder. The grip is the affordance; the whole tile is the
+   handle, so a missed grab still works. Tucked into the corner rather than taking a place in
+   the stack, which would push the swatch off-centre. */
+.bank-grip {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+}
+
+#bank-stored-list .node-card {
+  position: relative;
+  cursor: grab;
+  /* Dragging runs on pointer events, so the browser must not claim the gesture as a page
+     scroll before the handler sees it. */
+  touch-action: none;
+}
+
+#bank-stored-list .node-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#bank-stored-list .node-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* Where the dragged tile would land. Marked on the leading or trailing edge, matching the
+   direction the order runs in a grid, and drawn as an inset shadow rather than a border so
+   the tile doesn't change size and shove the grid around mid-drag. */
+#bank-stored-list .node-card.drop-before {
+  box-shadow: inset 2px 0 0 0 var(--accent);
+}
+
+#bank-stored-list .node-card.drop-after {
+  box-shadow: inset -2px 0 0 0 var(--accent);
+}
+
 /* The terms of a quest, shown before you accept and while it's running. */
 /* Sits at the bottom of the screen so it never covers the top nav — the same reason
    toasts moved there. */

@@ -225,6 +225,21 @@
         slot.appendChild(note);
       }
 
+      // Standing at the vault, the pack panel is the natural place to deposit from — it's
+      // where you're already looking to decide what to store. Gated on the screen for the
+      // same reason equipping is: this panel is visible everywhere, and a Deposit button
+      // that did nothing off-screen would be worse than no button. Gear is deposit-able
+      // here even though it isn't equip-able; storing a spare sword has no combat effect.
+      if (state.screen === 'bank' && window.Minerous.Bank) {
+        const blocked = window.Minerous.Bank.depositBlocked(id);
+        const btn = document.createElement('button');
+        btn.className = 'inv-action-btn';
+        btn.textContent = blocked ? 'Vault full' : 'Deposit';
+        btn.disabled = blocked;
+        btn.addEventListener('click', () => window.Minerous.Bank.deposit(id));
+        slot.appendChild(btn);
+      }
+
       container.appendChild(slot);
     }
   }

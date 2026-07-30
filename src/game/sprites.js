@@ -66,6 +66,9 @@ window.Minerous = window.Minerous || {};
       cols: 7,
       rows: 4,
       figureRatio: 232 / 323,
+      // Detailed illustration, and her cells are the largest of any sheet — nearest-neighbour
+      // sampling was throwing away most of her robe's shading. See .sprite-smooth.
+      smooth: true,
       // This sheet came labelled by row, so each row *is* an animation and the frames run
       // in the artist's own order. Cells 13, 20 and 27 are the empty tails of the three
       // six-pose rows.

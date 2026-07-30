@@ -745,10 +745,11 @@ window.Minerous.BATCH_OPTIONS = [
 window.Minerous.INVENTORY_SLOTS = 25;
 window.Minerous.BANK_SLOTS = 50;
 
-// How many of one thing fits in a single slot. 100 copper is four stacks, so a full
-// pack is a real constraint on a long gathering run rather than a formality.
-// The vault stores whole hoards in one entry — that's what a vault is for.
-window.Minerous.STACK_LIMIT = 28;
+// How many of one thing fits in a single slot. At 999 a slot holds effectively any haul,
+// so what limits a gathering run is the *variety* you're carrying rather than the amount of
+// any one thing. The vault stores whole hoards in one entry regardless — that's what a
+// vault is for.
+window.Minerous.STACK_LIMIT = 999;
 
 // Interest ticks on banked gold while you play. Deliberately small — it should feel
 // like a reason to bank rather than a way to get rich standing still.
