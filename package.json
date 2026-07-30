@@ -1,6 +1,6 @@
 {
   "name": "minerous",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Minerous - an idle mining & skilling game",
   "main": "main.js",
   "private": true,
