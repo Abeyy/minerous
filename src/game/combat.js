@@ -87,7 +87,7 @@ window.Minerous = window.Minerous || {};
     armorStatus: document.getElementById('combat-armor-status'),
     prayerStatus: document.getElementById('combat-prayer-status'),
     familiarStatus: document.getElementById('combat-familiar-status'),
-    styleLevel: document.getElementById('combat-style-level'),
+    skillName: document.getElementById('combat-skill-name'),
     attackStyleMenu: document.getElementById('attack-style-menu'),
     autoEatToggle: document.getElementById('combat-auto-eat-toggle'),
     log: document.getElementById('combat-log'),
@@ -351,20 +351,15 @@ window.Minerous = window.Minerous || {};
   // panel's own level row already shows, so the line only appears for the styles that
   // have a skill of their own — otherwise Ranger, Cleric and Monk xp would tick up with
   // nothing on screen to show it.
+  // The headline level bar at the top of the screen tracks whichever skill your gear is
+  // actually training — not always Melee, which is what it used to do. Fighting as a
+  // Gunslinger meant watching a Melee bar sit at 0 while the gunslinger xp piled up out of
+  // sight further down the panel, which reads as "this class earns no xp".
   function renderStyleLevel() {
     const skill = attackSkill();
-    if (skill === 'combat') {
-      el.styleLevel.hidden = true;
-      return;
-    }
-    el.styleLevel.hidden = false;
     const name = (SKILLS.find((s) => s.id === skill) || {}).name || skill;
-    const level = getLevel(skill);
-    const currentFloor = xpForLevel(level);
-    const nextFloor = level >= MAX_LEVEL ? currentFloor : xpForLevel(level + 1);
-    const xp = state.skillXp[skill] || 0;
-    const xpLabel = level >= MAX_LEVEL ? `${xp} xp (max)` : `${xp - currentFloor} / ${nextFloor - currentFloor} xp`;
-    el.styleLevel.textContent = `${name}: Level ${level} (${xpLabel})`;
+    el.skillName.textContent = name;
+    window.Minerous.renderSkillLevelRow('combat', skill);
   }
 
   // A read-only badge of which style is driving your damage. Changing style means changing
@@ -552,7 +547,6 @@ window.Minerous = window.Minerous || {};
     }
 
     window.Minerous.renderInventory();
-    window.Minerous.renderSkillLevelRow('combat', 'combat');
     renderStyleLevel();
 
     if (leveledUp) {
@@ -604,7 +598,6 @@ window.Minerous = window.Minerous || {};
     }
 
     window.Minerous.renderInventory();
-    window.Minerous.renderSkillLevelRow('combat', 'combat');
     renderStyleLevel();
   }
 
@@ -660,7 +653,6 @@ window.Minerous = window.Minerous || {};
       renderArmorStatus();
       renderPrayerStatus();
       renderFamiliarStatus();
-      window.Minerous.renderSkillLevelRow('combat', 'combat');
       renderStyleLevel();
       renderAttackStyleMenu();
       el.autoEatToggle.checked = state.combat.autoEat;

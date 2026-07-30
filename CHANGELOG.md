@@ -3,45 +3,18 @@
 Player-facing notes for each release. Paste the relevant section into the GitHub
 Release body when you publish a tag.
 
-## v0.1.5
-
-### 🎒 Items stack 999 to a slot
-
-Stacks were 28. A hundred copper took four slots; now it takes one, and so does a thousand.
-
-What limits a gathering run is the **variety** you're carrying rather than the amount of any
-one thing — you'll fill your pack by mining five kinds of ore, not by mining a lot of copper.
-The inventory header reads `stacks of 999`, and in practice you will not see a pile split
-across slots again.
-
-**The vault is unchanged** — it still stores 50 different kinds, any amount of each.
-
-### 🏦 The vault does what you tell it
-
-Three things the vault should always have done:
-
-- **Withdraw and deposit any amount.** Every tile has an amount field. Type a number and hit
-  Withdraw — or press Enter — and you get exactly that many. Leave it blank and it behaves
-  as before: everything, or as much as your pack will hold. Gold gets the same treatment
-  alongside the Deposit 100 / all buttons.
-- **Deposit from your pack.** Standing at the vault, every item in the inventory panel on
-  the right grows a **Deposit** button, so you can store things from the panel you're
-  already looking at instead of hunting for the same item in the vault's own list. The
-  button only appears at the vault. Spare weapons and armour can be deposited from there
-  too — equipping is still Loadout-only.
-- **Rearrange the vault.** Drag a tile to move it, and the order sticks — it's saved with
-  everything else. If dragging isn't convenient, click a tile and use the arrow keys. A fresh
-  deposit lands at the end, and withdrawing something to zero closes its gap without
-  disturbing the rest.
-
-The vault's tiles are a little larger than they were, to make room for the amount field
-without squeezing the name.
+## v0.1.7
 
 ### 🐛 Fixed
 
-- **The cleric sprite was grainy.** Hers were the largest source frames of any sheet and were
-  being shrunk by nearly two thirds on the fly, which threw away most of the shading on her
-  robes. She's now resampled properly and drawn near full size.
+- **The Battlegrounds always showed your Melee level, whatever you were fighting with.** The
+  big level bar at the top of the screen was wired to Melee, so a gunslinger, ranger, cleric
+  or monk watched it sit unmoved at 0 while their own xp piled up in a small grey line further
+  down the panel. The xp was always being awarded correctly — it just wasn't where anyone
+  would look for it.
+
+  The bar now tracks and names whichever skill your gear is training: **"Gunslinger Level 1 —
+  6 / 83 xp"**. The duplicate line below it is gone.
 
 ---
 
@@ -95,6 +68,48 @@ Battlegrounds' monster roster, at a place called the Hunting Grounds.
   started). Where there genuinely is no room — unequipping outright, or swapping to something
   that shared a stack so no slot came free — the change is **refused and the item stays
   equipped**, with a message saying so. Nothing is thrown away either way.
+
+---
+
+## v0.1.5
+
+### 🎒 Items stack 999 to a slot
+
+Stacks were 28. A hundred copper took four slots; now it takes one, and so does a thousand.
+
+What limits a gathering run is the **variety** you're carrying rather than the amount of any
+one thing — you'll fill your pack by mining five kinds of ore, not by mining a lot of copper.
+The inventory header reads `stacks of 999`, and in practice you will not see a pile split
+across slots again.
+
+**The vault is unchanged** — it still stores 50 different kinds, any amount of each.
+
+### 🏦 The vault does what you tell it
+
+Three things the vault should always have done:
+
+- **Withdraw and deposit any amount.** Every tile has an amount field. Type a number and hit
+  Withdraw — or press Enter — and you get exactly that many. Leave it blank and it behaves
+  as before: everything, or as much as your pack will hold. Gold gets the same treatment
+  alongside the Deposit 100 / all buttons.
+- **Deposit from your pack.** Standing at the vault, every item in the inventory panel on
+  the right grows a **Deposit** button, so you can store things from the panel you're
+  already looking at instead of hunting for the same item in the vault's own list. The
+  button only appears at the vault. Spare weapons and armour can be deposited from there
+  too — equipping is still Loadout-only.
+- **Rearrange the vault.** Drag a tile to move it, and the order sticks — it's saved with
+  everything else. If dragging isn't convenient, click a tile and use the arrow keys. A fresh
+  deposit lands at the end, and withdrawing something to zero closes its gap without
+  disturbing the rest.
+
+The vault's tiles are a little larger than they were, to make room for the amount field
+without squeezing the name.
+
+### 🐛 Fixed
+
+- **The cleric sprite was grainy.** Hers were the largest source frames of any sheet and were
+  being shrunk by nearly two thirds on the fly, which threw away most of the shading on her
+  robes. She's now resampled properly and drawn near full size.
 
 ---
 
